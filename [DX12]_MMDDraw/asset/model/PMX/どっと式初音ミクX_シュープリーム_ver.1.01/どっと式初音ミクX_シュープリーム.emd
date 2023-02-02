@@ -1,0 +1,15 @@
+[Info]
+Version = 3
+
+[Effect]
+Obj = none
+Obj[0] = textures\AlSkin.fx
+Obj[2] = textures\AlSkin.fx
+Obj[4] = textures\AlSkin.fx
+Obj[7] = textures\AlHair.fx
+Obj[9] = textures\AlCloth.fx
+Obj[10] = textures\AlCloth.fx
+Obj[12] = textures\AlCloth.fx
+Obj[13] = textures\AlCloth.fx
+Obj[16] = textures\AlAcc.fx
+Obj[17] = textures\AlAcc.fx
