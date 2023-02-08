@@ -655,9 +655,11 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		std::string name_eng;
 		XMFLOAT3 pos;
 		XMFLOAT3 coordofset;
-		int parentidx;
-		int transformlv;
-		int childenidx;
+		int parentidx;			//親ボーン
+		int transformlv;		//変形階層
+		int childenidx;			//子ボーン（接続先）
+		int imparttparentbone;	//付与親ボーンindex
+		float impartrate;		//付与率
 		uint16_t flag;
 	};
 
@@ -666,55 +668,75 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 	std::vector<PMXbone> bone(bonenum);
 	//ボーンを初期化
 	std::fill(m_boneMatrieces.begin(), m_boneMatrieces.end(), XMMatrixIdentity());
-	//{
-	//	enum BoneFlagMask
-	//	{
-	//		ACCESS_POINT = 0x0001,
-	//		IK = 0x0020,
-	//		IMPART_ROTATION = 0x0100,
-	//		IMPART_TRANSLATION = 0x0200,
-	//		AXIS_FIXING = 0x0400,
-	//		LOCAL_AXIS = 0x0800,
-	//		EXTERNAL_PARENT_TRANS = 0x2000,
-	//	};
-	//	//for (int i = 0; i < bonenum; i++)
-	//	//{
-	//	//	getPMXStringUTF16(fp, bone[i].name);
-	//	//	getPMXStringUTF16(fp, bone[i].name_eng);
-	//	//	fread(&bone[i].pos, sizeof(bone[i].pos), 1, fp);
-	//	//	fread(&bone[i].parentidx, hederData[BONE_INDEX_SIZE], 1, fp);
-	//	//	if (bone[i].parentidx >= bonenum)
-	//	//	{
-	//	//		bone[i].parentidx = -1;
-	//	//	}
-	//	//	fread(&bone[i].transformlv, sizeof(bone[i].transformlv), 1, fp);
-	//	//	fread(&bone[i].flag, 2, 1, fp);
 
-	//	//	if (bone[i].flag & ACCESS_POINT)
-	//	//	{
-	//	//		fread(&bone[i].childenidx, hederData[BONE_INDEX_SIZE], 1, fp);
-	//	//		if (bone[i].childenidx >= bonenum)
-	//	//		{
-	//	//			bone[i].childenidx = -1;
-	//	//		}
-	//	//	}
-	//	//	else
-	//	//	{
-	//	//		bone[i].childenidx = -1;
-	//	//		fread(&bone[i].coordofset, sizeof(bone[i].coordofset), 1, fp);
-	//	//	}
+	//ボーン情報読み込み
+	{
+		enum BoneFlagMask
+		{
+			ACCESS_POINT = 0x0001,
+			IK = 0x0020,
+			IMPART_ROTATION = 0x0100,
+			IMPART_TRANSLATION = 0x0200,
+			AXIS_FIXING = 0x0400,
+			LOCAL_AXIS = 0x0800,
+			EXTERNAL_PARENT_TRANS = 0x2000,
+		};
 
-	//	//	if ((bone[i].flag & IMPART_ROTATION) || (bone[i].flag & IMPART_TRANSLATION))
-	//	//	{
+		for (int i = 0; i < bonenum; i++)
+		{
+			getPMXStringUTF16(fp, bone[i].name);
+			getPMXStringUTF16(fp, bone[i].name_eng);
+			fread(&bone[i].pos, sizeof(bone[i].pos), 1, fp);
+			fread(&bone[i].parentidx, hederData[BONE_INDEX_SIZE], 1, fp);
+			if (bone[i].parentidx >= bonenum)
+			{
+				bone[i].parentidx = -1;
+			}
+			fread(&bone[i].transformlv, sizeof(bone[i].transformlv), 1, fp);
+			fread(&bone[i].flag, 2, 1, fp);
 
-	//	//	}
+			if (bone[i].flag & ACCESS_POINT)
+			{
+				fread(&bone[i].childenidx, hederData[BONE_INDEX_SIZE], 1, fp);
+				if (bone[i].childenidx >= bonenum)
+				{
+					bone[i].childenidx = -1;
+				}
+			}
+			else
+			{
+				bone[i].childenidx = -1;
+				fread(&bone[i].coordofset, sizeof(bone[i].coordofset), 1, fp);
+			}
 
-	//	//	m_boneNodetable[bone[i].name].startPos = bone[i].pos;
-	//	//	m_boneNodetable[bone[i].name].boneidx = bone[i].parentidx;
+			if ((bone[i].flag & IMPART_ROTATION) || (bone[i].flag & IMPART_TRANSLATION))
+			{
+				fread(&bone[i].imparttparentbone, hederData[BONE_INDEX_SIZE], 1, fp);
+				fread(&bone[i].impartrate, 4, 1, fp);
+			}
+			if (bone[i].flag & AXIS_FIXING)
+			{
 
-	//	//}
+			}
+			if (bone[i].flag & LOCAL_AXIS)
+			{
 
-	//}
+			}
+			if (bone[i].flag & EXTERNAL_PARENT_TRANS)
+			{
+
+			}
+			if (bone[i].flag & IK)
+			{
+
+			}
+			m_boneNodetable[bone[i].name].boneidx = i;
+			m_boneNodetable[bone[i].name].startPos = bone[i].pos;
+			m_boneNodetable[bone[i].name].parentBone = bone[i].parentidx;
+
+		}
+
+	}
 
 
 	//バッファ書き込み
