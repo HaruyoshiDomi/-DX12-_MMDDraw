@@ -53,7 +53,7 @@ HRESULT Render::Init(const HWND& hwnd)
 		assert(0);
 		return S_FALSE;
 	}
-	m_modelTabel.push_back(new PMDmodel("asset/Model/PMD/結月ゆかり_純_ver1.0/結月ゆかり_純_ver1.0.pmd", *this));
+	//m_modelTabel.push_back(new PMDmodel("asset/Model/PMD/結月ゆかり_純_ver1.0/結月ゆかり_純_ver1.0.pmd", *this));
 	m_modelTabel.push_back(new PMDmodel("asset/Model/PMD/Lat式ミクVer2.31/Lat式ミクVer2.31_Normal.pmd", *this));
 	m_modelTabel.push_back(new PMXmodel("asset/Model//PMX/ゆかりver7/ゆかりver7.pmx", *this));
 	Manager::Init();
@@ -81,6 +81,11 @@ void Render::Uninit()
 	delete m_instance;
 	m_instance = nullptr;
 	Manager::Uninit();
+	for (auto& model : m_modelTabel)
+	{
+		delete model;
+	}
+	m_modelTabel.clear();
 }
 
 Render* Render::Instance()
@@ -565,7 +570,7 @@ void Render::SetSceneView()
 	m_cmdList->SetGraphicsRootDescriptorTable(0, m_sceneDescHeap->GetGPUDescriptorHandleForHeapStart());
 }
 
-Model* Render::GetCharactor(int num)
+Model* Render::GetLodedModel(int num)
 {
 	if (num > m_modelTabel.size())
 		return nullptr;
@@ -630,6 +635,7 @@ void Render::CameraUpdate()
 
 Render::~Render()
 {
+	Uninit();
 }
 
 Render::Render() : m_parallelLightVec(1, -1, 1)

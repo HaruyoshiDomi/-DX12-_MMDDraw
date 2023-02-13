@@ -10,7 +10,7 @@ Character::Character()
 {
 	//m_motion = new VMDmotion("asset/motion/JUMP UP.vmd");
 	//m_model = new PMDmodel("asset/Model/PMD/Œ‹ŒŽ‚ä‚©‚è_ƒ_ver1.0/Œ‹ŒŽ‚ä‚©‚è_ƒ_ver1.0.pmd", *Render::Instance());
-	m_model = Render::Instance()->GetCharactor();
+	m_model = Render::Instance()->GetLodedModel();
 	//m_model->SetMotion(m_motion);
 }
 
@@ -50,16 +50,16 @@ void Character::Draw()
 void Character::ActorUpdate()
 {
 	static int num = 0;
-	static int mxnum = 2;
+	static int mxnum = Render::Instance()->GetCharacterNum() - 1;
 	if (!m_motion)
 	{
 		m_rotation.y += 0.01;
 		if (Input::GetKeyTrigger('M'))
 		{
 			m_motion = new VMDmotion("asset/motion/JUMP UP.vmd");
-			for (int i = 0; i < Render::Instance()->GetCharacterNum() - 1; i++)
+			for (int i = 0; i < Render::Instance()->GetCharacterNum(); i++)
 			{
-				Render::Instance()->GetCharactor(i)->SetMotion(m_motion);
+				Render::Instance()->GetLodedModel(i)->SetMotion(m_motion);
 			}
 			m_model->SetMotion(m_motion);
 			m_rotation.y = 0;
@@ -77,14 +77,14 @@ void Character::ActorUpdate()
 
 	if (Input::GetKeyTrigger('C'))
 	{
+		++num;
 		if (num > mxnum)
 			num = 0;
 
-		m_model = Render::Instance()->GetCharactor(num);
-		if(m_motion && num < mxnum  + 1)
+		m_model = Render::Instance()->GetLodedModel(num);
+		if(m_motion && num <= mxnum  )
 			m_model->SetMotion(m_motion);
 
-		num++;
 	}
 
 	m_martrix = XMMatrixRotationRollPitchYaw(m_rotation.x, m_rotation.y, m_rotation.z);

@@ -1,5 +1,7 @@
 ﻿#include "main.h"
 #include "Render.h"
+#include "VMDmotion.h"
+#include "XMFLOAT_Helper.h"
 #include "PMXmodel.h"
 #include <fstream>
 #include <array>
@@ -22,8 +24,17 @@ PMXmodel::~PMXmodel()
 
 void PMXmodel::Update(XMMATRIX& martrix)
 {
-	m_mappedTransform->world = martrix;
+	m_mappedMartrices[0] = martrix;
+	if (m_motion)
+	{
+		if (m_motion->GetMotionFlag())
+		{
+			m_motion->UpdateMotion();
+			RecursiveMatrixMultiply(&m_boneNodetable["センター"], XMMatrixIdentity());
+		}
+		std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
 
+	}
 }
 
 void PMXmodel::Draw()
@@ -116,17 +127,23 @@ HRESULT PMXmodel::CreateGraphicsPipeline()
 			return S_FALSE;
 		}
 	}
-
+	WORD a;
 	D3D12_INPUT_ELEMENT_DESC inputLayout[] =
 	{
 		{ "POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
 		{ "NORMAL",0,DXGI_FORMAT_R32G32B32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
 		{ "TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
-		{ "EXUV",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
-		{ "TYPE",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
-		{ "BONENO",0,DXGI_FORMAT_R8_UINT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
-		{ "WEIGHT",0,DXGI_FORMAT_R8_UINT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
-		{ "EDGE_FLG",0,DXGI_FORMAT_R8_UINT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "EXUVI",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "EXUVII",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "EXUVIII",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "EXUVIV",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "TYPE",0,DXGI_FORMAT_R8_UINT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "BONENO",0,DXGI_FORMAT_R32G32B32A32_SINT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "WEIGHT",0,DXGI_FORMAT_R32G32B32A32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "C",0,DXGI_FORMAT_R32G32B32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "RZ",0,DXGI_FORMAT_R32G32B32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
+		{ "RO",0,DXGI_FORMAT_R32G32B32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 }
+		//{ "EDGE_FLG",0,DXGI_FORMAT_R8_UINT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0 },
 	};
 
 	float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -324,7 +341,7 @@ HRESULT PMXmodel::CreateMaterialAndTextureView()
 HRESULT PMXmodel::CreateTransformView()
 {
 	//GPUバッファ作成
-	auto buffSize = sizeof(Transform);
+	auto buffSize = sizeof(XMMATRIX) * (1 + m_boneMatrieces.size());
 	buffSize = (buffSize + 0xff) & ~0xff;
 	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(buffSize);
@@ -337,20 +354,22 @@ HRESULT PMXmodel::CreateTransformView()
 		nullptr,
 		IID_PPV_ARGS(m_transformBuff.ReleaseAndGetAddressOf())
 	);
-	if (FAILED(result)) 
+	if (FAILED(result))
 	{
 		assert(SUCCEEDED(result));
 		return result;
 	}
 
 	//マップとコピー
-	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappedTransform);
-	if (FAILED(result)) 
+	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappedMartrices);
+	if (FAILED(result))
 	{
 		assert(SUCCEEDED(result));
 		return result;
 	}
-	*m_mappedTransform = m_transform;
+	m_mappedMartrices[0] = m_transform.world;
+
+	std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
 
 	//ビューの作成
 	D3D12_DESCRIPTOR_HEAP_DESC transformDescHeapDesc = {};
@@ -360,7 +379,8 @@ HRESULT PMXmodel::CreateTransformView()
 
 	transformDescHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;//デスクリプタヒープ種別
 	result = m_dx12.Device()->CreateDescriptorHeap(&transformDescHeapDesc, IID_PPV_ARGS(m_transformHeap.ReleaseAndGetAddressOf()));//生成
-	if (FAILED(result)) {
+	if (FAILED(result))
+	{
 		assert(SUCCEEDED(result));
 		return result;
 	}
@@ -372,6 +392,7 @@ HRESULT PMXmodel::CreateTransformView()
 
 	return S_OK;
 }
+uint8_t boneidx[4];
 
 HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 {
@@ -396,6 +417,7 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		TEXTURE_INDEX_SIZE,
 		MATERIAL_INDEX_SIZE,
 		BONE_INDEX_SIZE,
+		MORF_INDEX_SIZE,
 		RIGID_BODY_INDEX_SIZE
 	};
 
@@ -464,10 +486,7 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		int	born2;
 		int	born3;
 		int	born4;
-		float weight1;
-		float weight2;
-		float weight3;
-		float weight4;
+		XMFLOAT4 weight;
 		XMFLOAT3 c;
 		XMFLOAT3 r0;
 		XMFLOAT3 r1;
@@ -482,14 +501,8 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		XMFLOAT2 uv;
 		XMFLOAT4 additionaluv[4];
 		uint8_t type;
-		int born1;
-		int	born2;
-		int	born3;
-		int	born4;
-		float weight1;
-		float weight2;
-		float weight3;
-		float weight4;
+		int born[4] = { -1, -1, -1, -1 };
+		XMFLOAT4 weight = {-1, -1, -1, -1};
 		XMFLOAT3 c;
 		XMFLOAT3 r0;
 		XMFLOAT3 r1;
@@ -502,69 +515,81 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 	std::vector<PMXVertice> vertice(numVer);
 	std::vector<Vertices> vertices(numVer);
 	// ボーンウェイト
-
-	for (int i = 0; i < numVer; i++)
 	{
-		fread(&vertice[i].pos, sizeof(XMFLOAT3), 1, fp);
-		fread(&vertice[i].normal, sizeof(XMFLOAT3), 1, fp);
-		fread(&vertice[i].uv, sizeof(XMFLOAT2), 1, fp);
-		vertices[i].pos = vertice[i].pos;
-		vertices[i].normal = vertice[i].normal;
-		vertices[i].uv = vertice[i].uv;
-		if (hederData[NUMBER_OF_ADD_UV] != 0)
-		{
-			for (int j = 0; j < hederData[NUMBER_OF_ADD_UV]; ++j)
-			{
-				fread(&vertice[i].additionaluv[j], sizeof(XMFLOAT4), 1, fp);
-			}
-		}
-		uint8_t weightMethot = 0;
-		fread(&weightMethot, sizeof(weightMethot), 1, fp);
-		switch (weightMethot)
-		{
-		case Type::BDEF1:
-			weight[i].type = Type::BDEF1;
-			fread(&vertice[i].born1, hederData[BONE_INDEX_SIZE], 1, fp);
-			vertice[i].born2 = -1;
-			vertice[i].born3 = -1;
-			vertice[i].born4 = -1;
-			vertice[i].weight1 = 1.0f;
-			break;
-		case Type::BDEF2:
-			weight[i].type = Type::BDEF2;
-			fread(&vertice[i].born1, hederData[BONE_INDEX_SIZE], 1, fp);
-			fread(&vertice[i].born2, hederData[BONE_INDEX_SIZE], 1, fp);
-			vertice[i].born3 = -1;
-			vertice[i].born4 = -1;
-			fread(&vertice[i].weight1, sizeof(float), 1, fp);
-			vertice[i].weight2 = 1.0f - vertice[i].weight1;
-			break;
-		case Type::BDEF4:
-			weight[i].type = Type::BDEF4;
-			fread(&vertice[i].born1, hederData[BONE_INDEX_SIZE], 1, fp);
-			fread(&vertice[i].born2, hederData[BONE_INDEX_SIZE], 1, fp);
-			fread(&vertice[i].born3, hederData[BONE_INDEX_SIZE], 1, fp);
-			fread(&vertice[i].born4, hederData[BONE_INDEX_SIZE], 1, fp);
-			fread(&vertice[i].weight1, sizeof(float), 1, fp);
-			fread(&vertice[i].weight2, sizeof(float), 1, fp);
-			fread(&vertice[i].weight3, sizeof(float), 1, fp);
-			fread(&vertice[i].weight4, sizeof(float), 1, fp);
-			break;
-		case Type::SDEF:
-			weight[i].type = Type::SDEF;
-			fread(&vertice[i].born1, hederData[BONE_INDEX_SIZE], 1, fp);
-			fread(&vertice[i].born2, hederData[BONE_INDEX_SIZE], 1, fp);
-			vertice[i].born3 = -1;
-			vertice[i].born4 = -1;
-			fread(&vertice[i].weight1, sizeof(float), 1, fp);
-			vertice[i].weight2 = 1.0f - vertice[i].weight1;
-			fread(&vertice[i].c, sizeof(XMFLOAT3), 1, fp);
-			fread(&vertice[i].r0, sizeof(XMFLOAT3), 1, fp);
-			fread(&vertice[i].r1, sizeof(XMFLOAT3), 1, fp);
-			break;
-		}
 
-		fread(&vertice[i].edgenif, sizeof(float), 1, fp);
+
+		for (int i = 0; i < numVer; i++)
+		{
+			fread(&vertice[i].pos, sizeof(XMFLOAT3), 1, fp);
+			fread(&vertice[i].normal, sizeof(XMFLOAT3), 1, fp);
+			fread(&vertice[i].uv, sizeof(XMFLOAT2), 1, fp);
+			vertices[i].pos = vertice[i].pos;
+			vertices[i].normal = vertice[i].normal;
+			vertices[i].uv = vertice[i].uv;
+			if (hederData[NUMBER_OF_ADD_UV] != 0)
+			{
+				for (int j = 0; j < hederData[NUMBER_OF_ADD_UV]; ++j)
+				{
+					fread(&vertice[i].additionaluv[j], sizeof(XMFLOAT4), 1, fp);
+				}
+			}
+			uint8_t weightMethot = 0;
+			fread(&weightMethot, sizeof(weightMethot), 1, fp);
+			switch (weightMethot)
+			{
+			case Type::BDEF1:
+				vertice[i].type = weight[i].type = Type::BDEF1;
+				fread(&boneidx[0], hederData[BONE_INDEX_SIZE], 1, fp);
+				vertice[i].born[0] = boneidx[0];
+				vertice[i].born[1] = -1;
+				vertice[i].born[2] = -1;
+				vertice[i].born[3] = -1;
+				vertice[i].weight.x = 1.0f;
+				break;
+			case Type::BDEF2:
+				vertice[i].type = weight[i].type = Type::BDEF2;
+				fread(&boneidx[0], hederData[BONE_INDEX_SIZE], 1, fp);
+				fread(&boneidx[1], hederData[BONE_INDEX_SIZE], 1, fp);
+				vertice[i].born[0] = boneidx[0];
+				vertice[i].born[1] = boneidx[1];
+				vertice[i].born[2] = -1;
+				vertice[i].born[3] = -1;
+				fread(&vertice[i].weight.x, sizeof(float), 1, fp);
+				vertice[i].weight.y = 1.0f - vertice[i].weight.x;
+				break;
+			case Type::BDEF4:
+				vertice[i].type = weight[i].type = Type::BDEF4;
+				fread(&boneidx[0], hederData[BONE_INDEX_SIZE], 1, fp);
+				fread(&boneidx[1], hederData[BONE_INDEX_SIZE], 1, fp);
+				fread(&boneidx[2], hederData[BONE_INDEX_SIZE], 1, fp);
+				fread(&boneidx[3], hederData[BONE_INDEX_SIZE], 1, fp);
+				vertice[i].born[0] = boneidx[0];
+				vertice[i].born[1] = boneidx[1];
+				vertice[i].born[2] = boneidx[2];
+				vertice[i].born[3] = boneidx[3];
+				fread(&vertice[i].weight.x, sizeof(float), 1, fp);
+				fread(&vertice[i].weight.y, sizeof(float), 1, fp);
+				fread(&vertice[i].weight.z, sizeof(float), 1, fp);
+				fread(&vertice[i].weight.w, sizeof(float), 1, fp);
+				break;
+			case Type::SDEF:
+				vertice[i].type = weight[i].type = Type::SDEF;
+				fread(&boneidx[0], hederData[BONE_INDEX_SIZE], 1, fp);
+				fread(&boneidx[1], hederData[BONE_INDEX_SIZE], 1, fp);
+				vertice[i].born[0] = boneidx[0];
+				vertice[i].born[1] = boneidx[1];
+				vertice[i].born[2] = -1;
+				vertice[i].born[3] = -1;
+				fread(&vertice[i].weight.x, sizeof(float), 1, fp);
+				vertice[i].weight.y = 1.0f - vertice[i].weight.x;
+				fread(&vertice[i].c, sizeof(XMFLOAT3), 1, fp);
+				fread(&vertice[i].r0, sizeof(XMFLOAT3), 1, fp);
+				fread(&vertice[i].r1, sizeof(XMFLOAT3), 1, fp);
+				break;
+			}
+
+			fread(&vertice[i].edgenif, sizeof(float), 1, fp);
+		}
 	}
 
 	//インデックス
@@ -655,22 +680,42 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		std::string name_eng;
 		XMFLOAT3 pos;
 		XMFLOAT3 coordofset;
+		XMFLOAT3 fixedaxis;		//固定軸方向ベクトル
+		XMFLOAT3 localaxisX;	//ローカルのX軸方向ベクトル
+		XMFLOAT3 localaxisZ;	//ローカルのZ軸方向ベクトル
 		int parentidx;			//親ボーン
 		int transformlv;		//変形階層
 		int childenidx;			//子ボーン（接続先）
 		int imparttparentbone;	//付与親ボーンindex
+		int externalparentkey;	//外部親変形値
 		float impartrate;		//付与率
+		int iktargetindex;
+		int ikloopcount;
+		float ikunitangle;		//ループ1回あたりの制限角度（ラジアン角）「PMDIK値の4倍」
 		uint16_t flag;
+
+		struct IKLink
+		{
+			int index;
+			bool existangellimit;
+			XMFLOAT3 limitangmin;
+			XMFLOAT3 limitangmax;
+		};
+		std::vector<IKLink> ikLink;
 	};
 
 	fread(&bonenum, sizeof(bonenum), 1, fp);
 	m_boneMatrieces.resize(bonenum);
+	m_boneNameArray.resize(bonenum);
+	m_boneNodeAddressArray.resize(bonenum);
 	std::vector<PMXbone> bone(bonenum);
 	//ボーンを初期化
 	std::fill(m_boneMatrieces.begin(), m_boneMatrieces.end(), XMMatrixIdentity());
 
 	//ボーン情報読み込み
 	{
+		int iklinksize = 0;
+		uint8_t anglim = 0;
 		enum BoneFlagMask
 		{
 			ACCESS_POINT = 0x0001,
@@ -716,29 +761,162 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 			}
 			if (bone[i].flag & AXIS_FIXING)
 			{
-
+				fread(&bone[i].fixedaxis, sizeof(bone[i].fixedaxis), 1, fp);
 			}
 			if (bone[i].flag & LOCAL_AXIS)
 			{
-
+				fread(&bone[i].localaxisX, sizeof(bone[i].localaxisX), 1, fp);
+				fread(&bone[i].localaxisZ, sizeof(bone[i].localaxisZ), 1, fp);
 			}
 			if (bone[i].flag & EXTERNAL_PARENT_TRANS)
 			{
-
+				fread(&bone[i].externalparentkey, 4, 1, fp);
 			}
 			if (bone[i].flag & IK)
 			{
-
+				fread(&bone[i].iktargetindex, hederData[BONE_INDEX_SIZE], 1, fp);
+				fread(&bone[i].ikloopcount, 4, 1, fp);
+				fread(&bone[i].ikunitangle, 4, 1, fp);
+				fread(&iklinksize, 4, 1, fp);
+				bone[i].ikLink.resize(iklinksize);
+				for (int j = 0; j < iklinksize; j++)
+				{
+					fread(&bone[i].ikLink[j].index, hederData[BONE_INDEX_SIZE], 1, fp);
+					fread(&anglim, sizeof(anglim), 1, fp);
+					bone[i].ikLink[j].existangellimit = false;
+					if (anglim == 1)
+					{
+						fread(&bone[i].ikLink[j].limitangmin, sizeof(XMFLOAT3), 1, fp);
+						fread(&bone[i].ikLink[j].limitangmax, sizeof(XMFLOAT3), 1, fp);
+					}
+				}
 			}
-			m_boneNodetable[bone[i].name].boneidx = i;
-			m_boneNodetable[bone[i].name].startPos = bone[i].pos;
-			m_boneNodetable[bone[i].name].parentBone = bone[i].parentidx;
+			else
+			{
+				bone[i].iktargetindex = -1;
+			}
+			//ボーンノードマップ作製
+			auto& node = m_boneNodetable[bone[i].name];
+			node.boneidx = i;
+			node.startPos = bone[i].pos;
+			node.parentBone = bone[i].parentidx;
+			node.ikparentBone = bone[i].iktargetindex;
 
+			m_boneNameArray[i] = bone[i].name;
+			m_boneNodeAddressArray[i] = &node;
+		}
+
+		//親子関係構築
+		for (auto& bone : bone)
+		{
+			if (bone.parentidx >= bonenum)
+				continue;
+
+			auto parentname = m_boneNameArray[bone.parentidx];
+			m_boneNodetable[parentname].children.emplace_back(&m_boneNodetable[bone.name]);
 		}
 
 	}
 
+	//モーフ（表情）
+	int morfnum;
+	fread(&morfnum, sizeof(morfnum), 1, fp);
 
+	struct PMXmorfdata
+	{
+		std::string name;
+		std::string name_eng;
+		uint8_t panel;
+		uint8_t type;
+		int offsetnum;
+
+	};
+	struct Moftvertex
+	{
+		int idx;
+		XMFLOAT3 pos;
+	};
+	struct MoftUV
+	{
+		int idx;
+		XMFLOAT4 pos;
+	};
+	std::vector<PMXmorfdata> morfdata(morfnum);
+	std::vector<Moftvertex> morfvertex;
+	std::vector<MoftUV> morfuv;
+	for (int i = 0; i < morfnum; i++)
+	{
+		getPMXStringUTF16(fp, morfdata[i].name);
+		getPMXStringUTF16(fp, morfdata[i].name_eng);
+		fread(&morfdata[i].panel, 1, 1, fp);
+		fread(&morfdata[i].type, 1, 1, fp);
+		fread(&morfdata[i].offsetnum, 4, 1, fp);
+		switch (morfdata[i].type)
+		{
+		case 0:
+			break;
+		case 1:
+			morfvertex.resize(morfdata[i].offsetnum);
+
+			for (int j = 0; j < morfdata[i].offsetnum; j++)
+			{
+				fread(&morfvertex[j].idx, hederData[VERTEX_INDEX_SIZE], 1, fp);
+				fread(&morfvertex[j].pos, sizeof(XMFLOAT3), 1, fp);
+			}
+			break;
+		case 2:
+			break;
+		case 3:
+			morfuv.resize(morfdata[i].offsetnum);
+
+			for (int j = 0; j < morfdata[i].offsetnum; j++)
+			{
+				fread(&morfuv[j].idx, hederData[VERTEX_INDEX_SIZE], 1, fp);
+				fread(&morfuv[j].pos, sizeof(XMFLOAT4), 1, fp);
+			}
+			break;
+		case 4:
+			break;
+		case 5:
+			break;
+		case 6:
+			break;
+		case 7:
+			break;
+		case 8:
+			break;
+
+		default:
+			break;
+		}
+
+	}
+
+	int flamenum;
+	fread(&flamenum, sizeof(flamenum), 1, fp);
+
+
+	std::string namemorf;
+	std::string namemorfe;
+	uint8_t flag;
+	int numval;
+	uint8_t typemb;
+	int wwidx = 0;
+	getPMXStringUTF16(fp, namemorf);
+	getPMXStringUTF16(fp, namemorfe);
+	fread(&flag, 1, 1, fp);
+	fread(&numval, 4, 1, fp);
+	fread(&typemb, 1, 1, fp);
+	fread(&wwidx, hederData[BONE_INDEX_SIZE], 1, fp);
+	getPMXStringUTF16(fp, namemorf);
+	getPMXStringUTF16(fp, namemorfe);
+	fread(&flag, 1, 1, fp);
+	fread(&numval, 4, 1, fp);
+	fread(&typemb, 1, 1, fp);
+	fread(&wwidx, hederData[MORF_INDEX_SIZE], 1, fp);
+
+	//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+	// 
 	//バッファ書き込み
 
 	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
@@ -758,7 +936,7 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 	m_vb->Unmap(0, nullptr);
 
 	m_vbView.BufferLocation = m_vb->GetGPUVirtualAddress();//バッファの仮想アドレス
-	m_vbView.SizeInBytes = vertices.size() * sizeof(PMXVertice);//全バイト数
+	m_vbView.SizeInBytes = vertice.size() * sizeof(PMXVertice);//全バイト数
 	m_vbView.StrideInBytes = sizeof(vertice[0]);//1頂点あたりのバイト数
 
 	auto resDescBuf = CD3DX12_RESOURCE_DESC::Buffer(indices.size() * sizeof(indices[0]));
@@ -833,22 +1011,22 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 	fclose(fp);
 }
 
-bool PMXmodel::getPMXStringUTF16(FILE* helper, std::string& outpath)
+bool PMXmodel::getPMXStringUTF16(FILE* file, std::string& outpath)
 {
 	std::array<wchar_t, 512> wBuffer{};
 	uint32_t textSize = 0;
-	fread(&textSize, 4, 1, helper);
-	fread(&wBuffer[0], textSize, 1, helper);
+	fread(&textSize, 4, 1, file);
+	fread(&wBuffer[0], textSize, 1, file);
 	outpath = helper::GetStringFromWideString(wstring(&wBuffer[0], &wBuffer[0] + textSize / 2));
 	return true;
 }
 
-bool PMXmodel::getPMXStringUTF16(FILE* helper, std::wstring& outpath)
+bool PMXmodel::getPMXStringUTF16(FILE* file, std::wstring& outpath)
 {
 	std::array<wchar_t, 512> wBuffer{};
 	uint32_t textSize = 0;
-	fread(&textSize, 4, 1, helper);
-	fread(&wBuffer[0], textSize, 1, helper);
+	fread(&textSize, 4, 1, file);
+	fread(&wBuffer[0], textSize, 1, file);
 	outpath = wstring(&wBuffer[0], &wBuffer[0] + textSize / 2);
 	return true;
 }

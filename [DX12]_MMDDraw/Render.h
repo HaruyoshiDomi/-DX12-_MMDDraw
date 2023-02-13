@@ -53,7 +53,7 @@ public:
 	ComPtr<ID3D12Resource> GetShadowTexture();
 
 	void SetSceneView();
-	class Model* GetCharactor(int num = 0);
+	class Model* GetLodedModel(int num = 0);
 	int GetCharacterNum() { return m_modelTabel.size(); }
 	void CameraUpdate();
 
@@ -68,8 +68,8 @@ private:
 
 
 
-	ComPtr<IDXGIFactory6> m_dxgifactory = nullptr;
-	ComPtr<IDXGISwapChain4> m_swapchain = nullptr;
+	ComPtr<IDXGIFactory4> m_dxgifactory = nullptr;
+	ComPtr<IDXGISwapChain3> m_swapchain = nullptr;
 
 	ComPtr<ID3D12Device> m_dev = nullptr;
 	ComPtr<ID3D12CommandAllocator> m_cmdAllocator = nullptr;

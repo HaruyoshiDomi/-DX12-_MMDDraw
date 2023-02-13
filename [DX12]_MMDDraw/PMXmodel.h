@@ -81,21 +81,6 @@ private:
 	std::vector<ComPtr<ID3D12Resource>> m_toonResources;
 	std::vector<ComPtr<ID3D12Resource>> m_subtextureResources;
 
-	//É{Å[Éìä÷òA
-	std::vector<XMMATRIX> m_boneMatrieces;
-
-	struct BoneNode
-	{
-		uint16_t boneidx;
-		uint16_t childrenidx;
-		uint16_t bonetype;
-		uint16_t parentBone;
-		uint16_t ikparentBone;
-		XMFLOAT3 startPos;
-		XMFLOAT3 endpos;
-		std::vector<BoneNode*> children;
-	};
-	std::map<std::string, BoneNode> m_boneNodetable;
 
 	struct PMDIK
 	{
@@ -107,12 +92,6 @@ private:
 
 	};
 	std::vector<PMDIK> m_ikdata;
-
-	//XMMATRIX* m_mappedmartrices = nullptr;
-
-	Transform m_transform;
-	Transform* m_mappedTransform = nullptr;
-	ComPtr<ID3D12Resource> m_transformBuff = nullptr;
 
 
 	ComPtr< ID3D12DescriptorHeap> m_materialHeap = nullptr;
