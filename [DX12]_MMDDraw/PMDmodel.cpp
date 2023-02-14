@@ -558,10 +558,10 @@ HRESULT PMDmodel::LoadPMDFile(const char* path)
 		nullptr,
 		IID_PPV_ARGS(m_vb.ReleaseAndGetAddressOf()));
 
+	//モーフ更新のためUnmapしない
 	PMDVertex* vertMap = nullptr;
 	result = m_vb->Map(0, nullptr, (void**)&vertMap);
 	std::copy(m_vertices.begin(), m_vertices.end(), vertMap);
-	//m_vb->Unmap(0, nullptr);
 
 
 	m_vbView.BufferLocation = m_vb->GetGPUVirtualAddress();//バッファの仮想アドレス

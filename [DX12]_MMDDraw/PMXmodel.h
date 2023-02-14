@@ -82,18 +82,24 @@ private:
 	std::vector<ComPtr<ID3D12Resource>> m_subtextureResources;
 
 
-	struct PMDIK
+	struct PMXIK
 	{
 		uint16_t boneIdx;//IK対象のボーンを示す
 		uint16_t targetIdx;//ターゲットに近づけるためのボーンのインデックス
 		uint16_t iterations;//試行回数
 		float limit;//一回当たりの回転制限
 		std::vector<uint16_t> nodeIdxes;//間のノード番号
-
 	};
-	std::vector<PMDIK> m_ikdata;
+	std::vector<PMXIK> m_ikdata;
 
 
+	struct MorfData
+	{
+		std::string name;
+		std::vector<XMFLOAT3> posval;
+		std::vector<XMFLOAT4> uv;
+	};
+	
 	ComPtr< ID3D12DescriptorHeap> m_materialHeap = nullptr;
 
 	float m_angle = 0.0f;//テスト用Y軸回転
@@ -101,6 +107,8 @@ private:
 
 	bool getPMXStringUTF16(FILE* helper, std::string& outpath);
 	bool getPMXStringUTF16(FILE* helper, std::wstring& outpath);
+
+	void UpdateModelMorf();
 
 	std::wstring ChangeCNToJP( std::wstring path);
 };

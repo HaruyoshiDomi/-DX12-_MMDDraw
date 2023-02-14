@@ -33,8 +33,9 @@ void PMXmodel::Update(XMMATRIX& martrix)
 			RecursiveMatrixMultiply(&m_boneNodetable["センター"], XMMatrixIdentity());
 		}
 		std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
-
 	}
+
+	this->UpdateModelMorf();
 }
 
 void PMXmodel::Draw()
@@ -928,10 +929,10 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		nullptr,
 		IID_PPV_ARGS(m_vb.ReleaseAndGetAddressOf()));
 
+	//モーフ更新のためUnmapしない
 	PMXVertice* vertMap = nullptr;
 	result = m_vb->Map(0, nullptr, (void**)&vertMap);
 	std::copy(vertice.begin(), vertice.end(), vertMap);
-	m_vb->Unmap(0, nullptr);
 
 	m_vbView.BufferLocation = m_vb->GetGPUVirtualAddress();//バッファの仮想アドレス
 	m_vbView.SizeInBytes = vertice.size() * sizeof(PMXVertice);//全バイト数
@@ -1027,6 +1028,10 @@ bool PMXmodel::getPMXStringUTF16(FILE* file, std::wstring& outpath)
 	fread(&wBuffer[0], textSize, 1, file);
 	outpath = wstring(&wBuffer[0], &wBuffer[0] + textSize / 2);
 	return true;
+}
+
+void PMXmodel::UpdateModelMorf()
+{
 }
 
 std::wstring PMXmodel::ChangeCNToJP(std::wstring path)
