@@ -177,14 +177,14 @@ HRESULT PMDmodel::CreateGraphicsPipeline()
 {
 	if (!m_VSBlob && !m_PSBlob)
 	{
-		auto result = CreateVS(L"BasicVertexShader.cso");
+		auto result = CreateVS(L"PMDVS.cso");
 		if (FAILED(result))
 		{
 			assert(0);
 			return S_FALSE;
 		}
 
-		result = CreatePS(L"BasicPixelShader.cso");
+		result = CreatePS(L"PMDPS.cso");
 		if (FAILED(result))
 		{
 			assert(0);

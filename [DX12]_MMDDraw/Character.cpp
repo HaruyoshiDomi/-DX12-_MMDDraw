@@ -10,7 +10,8 @@ Character::Character()
 {
 	//m_motion = new VMDmotion("asset/motion/JUMP UP.vmd");
 	//m_model = new PMDmodel("asset/Model/PMD/Œ‹ŒŽ‚ä‚©‚è_ƒ_ver1.0/Œ‹ŒŽ‚ä‚©‚è_ƒ_ver1.0.pmd", *Render::Instance());
-	m_model = Render::Instance()->GetLodedModel();
+	auto render = Render::Instance();
+	m_model = render->GetLodedModel();
 	//m_model->SetMotion(m_motion);
 }
 

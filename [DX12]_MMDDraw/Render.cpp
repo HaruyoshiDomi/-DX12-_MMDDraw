@@ -86,6 +86,7 @@ void Render::Uninit()
 		delete model;
 	}
 	m_modelTabel.clear();
+	m_modelTabel.shrink_to_fit();
 }
 
 Render* Render::Instance()
@@ -543,6 +544,7 @@ void Render::InitCamera(DXGI_SWAP_CHAIN_DESC1& desc)
 	m_eye = XMFLOAT3(0, 15, -15);
 	m_target = XMFLOAT3(0, 15, 0);
 	m_up = XMFLOAT3(0, 1, 0);
+	m_mappedSceneData->light = { m_parallelLightVec.x, m_parallelLightVec.y, m_parallelLightVec.z, 0 };
 	m_mappedSceneData->view = XMMatrixLookAtLH(XMLoadFloat3(&m_eye), XMLoadFloat3(&m_target), XMLoadFloat3(&m_up));
 	m_mappedSceneData->proj = XMMatrixPerspectiveFovLH(XM_PIDIV4,//‰æŠp‚Í45‹
 		static_cast<float>(desc.Width) / static_cast<float>(desc.Height),//ƒAƒX”ä
@@ -572,7 +574,7 @@ void Render::SetSceneView()
 
 Model* Render::GetLodedModel(int num)
 {
-	if (num > m_modelTabel.size())
+	if (num >= m_modelTabel.size())
 		return nullptr;
 	else
 		return m_modelTabel[num];
@@ -629,6 +631,7 @@ void Render::CameraUpdate()
 		1000.0f//‰“‚¢•û
 	);
 	m_mappedSceneData->eye = m_eye;
+	m_mappedSceneData->light = { m_parallelLightVec.x, m_parallelLightVec.y, m_parallelLightVec.z, 0 };
 	m_mappedSceneData->shadow = XMMatrixShadow(XMLoadFloat4(&planenormalvec), -XMLoadFloat3(&m_parallelLightVec));
 	m_oldMousePos = { mousestate->x, mousestate->y };
 }

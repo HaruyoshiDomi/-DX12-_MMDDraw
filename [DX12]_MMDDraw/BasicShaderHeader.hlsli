@@ -37,6 +37,7 @@ cbuffer SceneData : register(b0)
     matrix view;
     matrix proj; //ビュープロジェクション行列
     matrix shadow;
+    float4 light;
     float3 eye;
 };
 cbuffer Transform : register(b1)

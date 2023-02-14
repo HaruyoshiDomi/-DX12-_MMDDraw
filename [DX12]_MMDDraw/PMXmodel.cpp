@@ -113,14 +113,14 @@ HRESULT PMXmodel::CreateGraphicsPipeline()
 {
 	if (!m_VSBlob && !m_PSBlob)
 	{
-		auto result = CreateVS(L"PMXVertexShader.cso");
+		auto result = CreateVS(L"PMXVS.cso");
 		if (FAILED(result))
 		{
 			assert(0);
 			return S_FALSE;
 		}
 
-		result = CreatePS(L"PMXPixelShader.cso");
+		result = CreatePS(L"PMXPS.cso");
 		if (FAILED(result))
 		{
 			assert(0);
@@ -392,7 +392,6 @@ HRESULT PMXmodel::CreateTransformView()
 
 	return S_OK;
 }
-uint8_t boneidx[4];
 
 HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 {
@@ -515,81 +514,80 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 	std::vector<PMXVertice> vertice(numVer);
 	std::vector<Vertices> vertices(numVer);
 	// ボーンウェイト
+
+	uint16_t boneindes[4] = {};
+
+	for (int i = 0; i < numVer; i++)
 	{
-
-
-		for (int i = 0; i < numVer; i++)
+		fread(&vertice[i].pos, sizeof(XMFLOAT3), 1, fp);
+		fread(&vertice[i].normal, sizeof(XMFLOAT3), 1, fp);
+		fread(&vertice[i].uv, sizeof(XMFLOAT2), 1, fp);
+		vertices[i].pos = vertice[i].pos;
+		vertices[i].normal = vertice[i].normal;
+		vertices[i].uv = vertice[i].uv;
+		if (hederData[NUMBER_OF_ADD_UV] != 0)
 		{
-			fread(&vertice[i].pos, sizeof(XMFLOAT3), 1, fp);
-			fread(&vertice[i].normal, sizeof(XMFLOAT3), 1, fp);
-			fread(&vertice[i].uv, sizeof(XMFLOAT2), 1, fp);
-			vertices[i].pos = vertice[i].pos;
-			vertices[i].normal = vertice[i].normal;
-			vertices[i].uv = vertice[i].uv;
-			if (hederData[NUMBER_OF_ADD_UV] != 0)
+			for (int j = 0; j < hederData[NUMBER_OF_ADD_UV]; ++j)
 			{
-				for (int j = 0; j < hederData[NUMBER_OF_ADD_UV]; ++j)
-				{
-					fread(&vertice[i].additionaluv[j], sizeof(XMFLOAT4), 1, fp);
-				}
+				fread(&vertice[i].additionaluv[j], sizeof(XMFLOAT4), 1, fp);
 			}
-			uint8_t weightMethot = 0;
-			fread(&weightMethot, sizeof(weightMethot), 1, fp);
-			switch (weightMethot)
-			{
-			case Type::BDEF1:
-				vertice[i].type = weight[i].type = Type::BDEF1;
-				fread(&boneidx[0], hederData[BONE_INDEX_SIZE], 1, fp);
-				vertice[i].born[0] = boneidx[0];
-				vertice[i].born[1] = -1;
-				vertice[i].born[2] = -1;
-				vertice[i].born[3] = -1;
-				vertice[i].weight.x = 1.0f;
-				break;
-			case Type::BDEF2:
-				vertice[i].type = weight[i].type = Type::BDEF2;
-				fread(&boneidx[0], hederData[BONE_INDEX_SIZE], 1, fp);
-				fread(&boneidx[1], hederData[BONE_INDEX_SIZE], 1, fp);
-				vertice[i].born[0] = boneidx[0];
-				vertice[i].born[1] = boneidx[1];
-				vertice[i].born[2] = -1;
-				vertice[i].born[3] = -1;
-				fread(&vertice[i].weight.x, sizeof(float), 1, fp);
-				vertice[i].weight.y = 1.0f - vertice[i].weight.x;
-				break;
-			case Type::BDEF4:
-				vertice[i].type = weight[i].type = Type::BDEF4;
-				fread(&boneidx[0], hederData[BONE_INDEX_SIZE], 1, fp);
-				fread(&boneidx[1], hederData[BONE_INDEX_SIZE], 1, fp);
-				fread(&boneidx[2], hederData[BONE_INDEX_SIZE], 1, fp);
-				fread(&boneidx[3], hederData[BONE_INDEX_SIZE], 1, fp);
-				vertice[i].born[0] = boneidx[0];
-				vertice[i].born[1] = boneidx[1];
-				vertice[i].born[2] = boneidx[2];
-				vertice[i].born[3] = boneidx[3];
-				fread(&vertice[i].weight.x, sizeof(float), 1, fp);
-				fread(&vertice[i].weight.y, sizeof(float), 1, fp);
-				fread(&vertice[i].weight.z, sizeof(float), 1, fp);
-				fread(&vertice[i].weight.w, sizeof(float), 1, fp);
-				break;
-			case Type::SDEF:
-				vertice[i].type = weight[i].type = Type::SDEF;
-				fread(&boneidx[0], hederData[BONE_INDEX_SIZE], 1, fp);
-				fread(&boneidx[1], hederData[BONE_INDEX_SIZE], 1, fp);
-				vertice[i].born[0] = boneidx[0];
-				vertice[i].born[1] = boneidx[1];
-				vertice[i].born[2] = -1;
-				vertice[i].born[3] = -1;
-				fread(&vertice[i].weight.x, sizeof(float), 1, fp);
-				vertice[i].weight.y = 1.0f - vertice[i].weight.x;
-				fread(&vertice[i].c, sizeof(XMFLOAT3), 1, fp);
-				fread(&vertice[i].r0, sizeof(XMFLOAT3), 1, fp);
-				fread(&vertice[i].r1, sizeof(XMFLOAT3), 1, fp);
-				break;
-			}
-
-			fread(&vertice[i].edgenif, sizeof(float), 1, fp);
 		}
+		uint8_t weightMethot = 0;
+		fread(&weightMethot, sizeof(weightMethot), 1, fp);
+		switch (weightMethot)
+		{
+		case Type::BDEF1:
+			vertice[i].type = weight[i].type = Type::BDEF1;
+			fread(&boneindes[0], hederData[BONE_INDEX_SIZE], 1, fp);
+			vertice[i].born[0] = boneindes[0];
+			vertice[i].born[1] = -1;
+			vertice[i].born[2] = -1;
+			vertice[i].born[3] = -1;
+			vertice[i].weight.x = 1.0f;
+			break;
+		case Type::BDEF2:
+			vertice[i].type = weight[i].type = Type::BDEF2;
+			fread(&boneindes[0], hederData[BONE_INDEX_SIZE], 1, fp);
+			fread(&boneindes[1], hederData[BONE_INDEX_SIZE], 1, fp);
+			vertice[i].born[0] = boneindes[0];
+			vertice[i].born[1] = boneindes[1];
+			vertice[i].born[2] = -1;
+			vertice[i].born[3] = -1;
+			fread(&vertice[i].weight.x, sizeof(float), 1, fp);
+			vertice[i].weight.y = 1.0f - vertice[i].weight.x;
+			break;
+		case Type::BDEF4:
+			vertice[i].type = weight[i].type = Type::BDEF4;
+			fread(&boneindes[0], hederData[BONE_INDEX_SIZE], 1, fp);
+			fread(&boneindes[1], hederData[BONE_INDEX_SIZE], 1, fp);
+			fread(&boneindes[2], hederData[BONE_INDEX_SIZE], 1, fp);
+			fread(&boneindes[3], hederData[BONE_INDEX_SIZE], 1, fp);
+			vertice[i].born[0] = boneindes[0];
+			vertice[i].born[1] = boneindes[1];
+			vertice[i].born[2] = boneindes[2];
+			vertice[i].born[3] = boneindes[3];
+			fread(&vertice[i].weight.x, sizeof(float), 1, fp);
+			fread(&vertice[i].weight.y, sizeof(float), 1, fp);
+			fread(&vertice[i].weight.z, sizeof(float), 1, fp);
+			fread(&vertice[i].weight.w, sizeof(float), 1, fp);
+			break;
+		case Type::SDEF:
+			vertice[i].type = weight[i].type = Type::SDEF;
+			fread(&boneindes[0], hederData[BONE_INDEX_SIZE], 1, fp);
+			fread(&boneindes[1], hederData[BONE_INDEX_SIZE], 1, fp);
+			vertice[i].born[0] = boneindes[0];
+			vertice[i].born[1] = boneindes[1];
+			vertice[i].born[2] = -1;
+			vertice[i].born[3] = -1;
+			fread(&vertice[i].weight.x, sizeof(float), 1, fp);
+			vertice[i].weight.y = 1.0f - vertice[i].weight.x;
+			fread(&vertice[i].c, sizeof(XMFLOAT3), 1, fp);
+			fread(&vertice[i].r0, sizeof(XMFLOAT3), 1, fp);
+			fread(&vertice[i].r1, sizeof(XMFLOAT3), 1, fp);
+			break;
+		}
+
+		fread(&vertice[i].edgenif, sizeof(float), 1, fp);
 	}
 
 	//インデックス

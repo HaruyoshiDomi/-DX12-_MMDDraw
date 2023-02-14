@@ -84,6 +84,7 @@ private:
 	std::unique_ptr<D3D12_RECT> m_scissorrect;
 
 	ComPtr<ID3D12Resource> m_sceneConstBuff = nullptr;
+	ComPtr<ID3D12Resource> m_lightConstBuff = nullptr;
 	ComPtr<ID3D12Resource> m_peraResource = nullptr;
 	ComPtr<ID3D12DescriptorHeap> m_peraRTVHeap = nullptr;
 	ComPtr<ID3D12DescriptorHeap> m_peraSRVHeap = nullptr;
@@ -93,6 +94,7 @@ private:
 		XMMATRIX view;//ビュープロジェクション行列
 		XMMATRIX proj;//
 		XMMATRIX shadow;
+		XMFLOAT4 light;
 		XMFLOAT3 eye;//視点座標
 	};
 
@@ -102,6 +104,7 @@ private:
 	XMFLOAT3 m_parallelLightVec;
 	XMFLOAT2 m_oldMousePos;
 	SceneData* m_mappedSceneData = nullptr;
+	XMFLOAT3* m_mappedLightData = nullptr;
 	ComPtr<ID3D12DescriptorHeap> m_sceneDescHeap = nullptr;
 
 	ComPtr<ID3D12Fence> m_fence = nullptr;
