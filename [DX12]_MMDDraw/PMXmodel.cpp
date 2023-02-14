@@ -64,7 +64,7 @@ void PMXmodel::Draw()
 	for (auto& m : m_materials)
 	{
 		m_dx12.CommandList()->SetGraphicsRootDescriptorTable(2, materialH);
-		m_dx12.CommandList()->DrawIndexedInstanced(m.indicesNum , 1, idxOffset, 0, 0);
+		m_dx12.CommandList()->DrawIndexedInstanced(m.indicesNum , 2, idxOffset, 0, 0);
 		materialH.ptr += cbvsrvIncSize;
 		idxOffset += m.indicesNum ;
 	}

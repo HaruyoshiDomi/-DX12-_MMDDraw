@@ -3,14 +3,17 @@
 
 float4 main(Model input) : SV_TARGET
 {
-    float3 light = normalize(float3(1, -1, 1)); //光の向かうベクトル(平行光線)
+    if (input.instNo > 0)
+        return float4(0, 0, 0, 1);
+
+    float3 lighting = normalize(light.xyz); //光の向かうベクトル(平行光線)
 
 	//ディフューズ計算
-    float diffuseB = saturate(-dot(light, input.normal.rgb));
+    float diffuseB = saturate(-dot(light.xyz, input.normal.rgb));
     float4 toonDif = toon.Sample(smptoon, float2(1, 1.0 - diffuseB));
 
 	//光の反射ベクトル
-    float3 refLight = normalize(reflect(light, input.normal.xyz));
+    float3 refLight = normalize(reflect(light.xyz, input.normal.xyz));
     float specularB = pow(saturate(dot(refLight, -input.ray)), specular.a);
 	
 	//スフィアマップ用UV

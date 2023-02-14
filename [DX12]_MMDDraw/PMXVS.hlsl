@@ -3,7 +3,7 @@
 
 Model main(float4 pos : POSITION, float4 normal : NORMAL, float2 uv : TEXCOORD, float4 exuv : EXUVI,
             uint type : TYPE, int4 boneno : BONENO, float4 weight : WEIGHT,
-            float4 c : C, float4 r0 : RZ, float4 r1 : RO
+            float4 c : C, float4 r0 : RZ, float4 r1 : RO, uint instNo : SV_InstanceID
             )
 {
     Model output; //ピクセルシェーダへ渡す値
@@ -27,8 +27,11 @@ Model main(float4 pos : POSITION, float4 normal : NORMAL, float2 uv : TEXCOORD, 
             bm = bones[boneno.x] * w1 + bones[boneno.y] * w2;
             break;
     }
+  
 
     output.pos = mul(world, mul(bm, pos));
+    if (instNo > 0)
+        output.pos = mul(shadow, output.pos);
     output.svpos = mul(proj, mul(view, output.pos)); //シェーダでは列優先なので注意
     normal.w = 0; //ここ重要(平行移動成分を無効にする)
     output.normal = mul(world, mul(bm, normal)); //法線にもワールド変換を行う
@@ -36,6 +39,7 @@ Model main(float4 pos : POSITION, float4 normal : NORMAL, float2 uv : TEXCOORD, 
     output.uv = uv;
     output.exuv = exuv[0];
     output.ray = normalize(output.svpos.xyz - mul(view, eye)); //視線ベクトル
+    output.instNo = instNo;
 
     return output;
 }
