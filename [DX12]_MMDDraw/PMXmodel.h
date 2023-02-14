@@ -29,13 +29,29 @@ protected:
 
 private:
 
-	struct Vertices
+	struct PMXVertice
 	{
 		XMFLOAT3 pos;
 		XMFLOAT3 normal;
 		XMFLOAT2 uv;
-	};
+		XMFLOAT4 additionaluv[4];
+		uint8_t type;
+		int born[4] = { -1, -1, -1, -1 };
+		XMFLOAT4 weight = { -1, -1, -1, -1 };
+		XMFLOAT3 c;
+		XMFLOAT3 r0;
+		XMFLOAT3 r1;
 
+		float edgenif;
+	};
+	std::vector<PMXVertice> m_vertice;
+
+	struct OriginalVertices
+	{
+		XMFLOAT3 pos;
+		XMFLOAT2 uv;
+	};
+	std::vector<OriginalVertices> m_originalVertices;
 	//シェーダ側に投げられるマテリアルデータ
 	struct MaterialForHlsl
 	{
@@ -93,13 +109,14 @@ private:
 	std::vector<PMXIK> m_ikdata;
 
 
-	struct MorfData
+	struct MorphsData
 	{
-		std::string name;
-		std::vector<XMFLOAT3> posval;
-		std::vector<XMFLOAT4> uv;
+		uint32_t vertexIndex;
+		XMFLOAT3 posval;
+		XMFLOAT4 uv;
 	};
 	
+	std::map<std::string, std::vector<MorphsData>> m_morphsData;
 	ComPtr< ID3D12DescriptorHeap> m_materialHeap = nullptr;
 
 	float m_angle = 0.0f;//テスト用Y軸回転

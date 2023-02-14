@@ -79,6 +79,9 @@ protected:
 
 	class VMDmotion* m_motion;
 
+	std::vector<std::string> m_morphsName;
+	std::map<std::string, float> m_morphsWeight;
+
 
 	HRESULT CreateVS(const std::wstring& filename);
 	HRESULT CreatePS(const std::wstring& filename);

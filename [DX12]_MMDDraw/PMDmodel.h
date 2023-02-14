@@ -90,8 +90,6 @@ private:
 #pragma pack()
 
 	std::map<std::string, std::vector<skindata>> m_morphsData;
-	std::map<std::string, float> m_morphsWeight;
-	std::vector<std::string> m_morphsName;
 
 
 	//Rigitbody========================================================================

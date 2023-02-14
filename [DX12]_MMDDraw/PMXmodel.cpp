@@ -33,9 +33,9 @@ void PMXmodel::Update(XMMATRIX& martrix)
 			RecursiveMatrixMultiply(&m_boneNodetable["センター"], XMMatrixIdentity());
 		}
 		std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
+		this->UpdateModelMorf();
 	}
 
-	this->UpdateModelMorf();
 }
 
 void PMXmodel::Draw()
@@ -478,59 +478,25 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		BDEF4,
 		SDEF,
 	};
-	struct Weight
-	{
 
-		Type type;
-		int born1;
-		int	born2;
-		int	born3;
-		int	born4;
-		XMFLOAT4 weight;
-		XMFLOAT3 c;
-		XMFLOAT3 r0;
-		XMFLOAT3 r1;
-	};
-
-	std::vector<Weight> weight(numVer);
-
-	struct PMXVertice
-	{
-		XMFLOAT3 pos;
-		XMFLOAT3 normal;
-		XMFLOAT2 uv;
-		XMFLOAT4 additionaluv[4];
-		uint8_t type;
-		int born[4] = { -1, -1, -1, -1 };
-		XMFLOAT4 weight = {-1, -1, -1, -1};
-		XMFLOAT3 c;
-		XMFLOAT3 r0;
-		XMFLOAT3 r1;
-
-		float edgenif;
-
-	};
-
-
-	std::vector<PMXVertice> vertice(numVer);
-	std::vector<Vertices> vertices(numVer);
+	m_vertice.resize(numVer);
+	m_originalVertices.resize(numVer);
 	// ボーンウェイト
 
 	uint16_t boneindes[4] = {};
 
 	for (int i = 0; i < numVer; i++)
 	{
-		fread(&vertice[i].pos, sizeof(XMFLOAT3), 1, fp);
-		fread(&vertice[i].normal, sizeof(XMFLOAT3), 1, fp);
-		fread(&vertice[i].uv, sizeof(XMFLOAT2), 1, fp);
-		vertices[i].pos = vertice[i].pos;
-		vertices[i].normal = vertice[i].normal;
-		vertices[i].uv = vertice[i].uv;
+		fread(&m_vertice[i].pos, sizeof(XMFLOAT3), 1, fp);
+		fread(&m_vertice[i].normal, sizeof(XMFLOAT3), 1, fp);
+		fread(&m_vertice[i].uv, sizeof(XMFLOAT2), 1, fp);
+		m_originalVertices[i].pos = m_vertice[i].pos;
+		m_originalVertices[i].uv = m_vertice[i].uv;
 		if (hederData[NUMBER_OF_ADD_UV] != 0)
 		{
 			for (int j = 0; j < hederData[NUMBER_OF_ADD_UV]; ++j)
 			{
-				fread(&vertice[i].additionaluv[j], sizeof(XMFLOAT4), 1, fp);
+				fread(&m_vertice[i].additionaluv[j], sizeof(XMFLOAT4), 1, fp);
 			}
 		}
 		uint8_t weightMethot = 0;
@@ -538,57 +504,57 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		switch (weightMethot)
 		{
 		case Type::BDEF1:
-			vertice[i].type = weight[i].type = Type::BDEF1;
+			m_vertice[i].type = Type::BDEF1;
 			fread(&boneindes[0], hederData[BONE_INDEX_SIZE], 1, fp);
-			vertice[i].born[0] = boneindes[0];
-			vertice[i].born[1] = -1;
-			vertice[i].born[2] = -1;
-			vertice[i].born[3] = -1;
-			vertice[i].weight.x = 1.0f;
+			m_vertice[i].born[0] = boneindes[0];
+			m_vertice[i].born[1] = -1;
+			m_vertice[i].born[2] = -1;
+			m_vertice[i].born[3] = -1;
+			m_vertice[i].weight.x = 1.0f;
 			break;
 		case Type::BDEF2:
-			vertice[i].type = weight[i].type = Type::BDEF2;
+			m_vertice[i].type = Type::BDEF2;
 			fread(&boneindes[0], hederData[BONE_INDEX_SIZE], 1, fp);
 			fread(&boneindes[1], hederData[BONE_INDEX_SIZE], 1, fp);
-			vertice[i].born[0] = boneindes[0];
-			vertice[i].born[1] = boneindes[1];
-			vertice[i].born[2] = -1;
-			vertice[i].born[3] = -1;
-			fread(&vertice[i].weight.x, sizeof(float), 1, fp);
-			vertice[i].weight.y = 1.0f - vertice[i].weight.x;
+			m_vertice[i].born[0] = boneindes[0];
+			m_vertice[i].born[1] = boneindes[1];
+			m_vertice[i].born[2] = -1;
+			m_vertice[i].born[3] = -1;
+			fread(&m_vertice[i].weight.x, sizeof(float), 1, fp);
+			m_vertice[i].weight.y = 1.0f - m_vertice[i].weight.x;
 			break;
 		case Type::BDEF4:
-			vertice[i].type = weight[i].type = Type::BDEF4;
+			m_vertice[i].type = Type::BDEF4;
 			fread(&boneindes[0], hederData[BONE_INDEX_SIZE], 1, fp);
 			fread(&boneindes[1], hederData[BONE_INDEX_SIZE], 1, fp);
 			fread(&boneindes[2], hederData[BONE_INDEX_SIZE], 1, fp);
 			fread(&boneindes[3], hederData[BONE_INDEX_SIZE], 1, fp);
-			vertice[i].born[0] = boneindes[0];
-			vertice[i].born[1] = boneindes[1];
-			vertice[i].born[2] = boneindes[2];
-			vertice[i].born[3] = boneindes[3];
-			fread(&vertice[i].weight.x, sizeof(float), 1, fp);
-			fread(&vertice[i].weight.y, sizeof(float), 1, fp);
-			fread(&vertice[i].weight.z, sizeof(float), 1, fp);
-			fread(&vertice[i].weight.w, sizeof(float), 1, fp);
+			m_vertice[i].born[0] = boneindes[0];
+			m_vertice[i].born[1] = boneindes[1];
+			m_vertice[i].born[2] = boneindes[2];
+			m_vertice[i].born[3] = boneindes[3];
+			fread(&m_vertice[i].weight.x, sizeof(float), 1, fp);
+			fread(&m_vertice[i].weight.y, sizeof(float), 1, fp);
+			fread(&m_vertice[i].weight.z, sizeof(float), 1, fp);
+			fread(&m_vertice[i].weight.w, sizeof(float), 1, fp);
 			break;
 		case Type::SDEF:
-			vertice[i].type = weight[i].type = Type::SDEF;
+			m_vertice[i].type = Type::SDEF;
 			fread(&boneindes[0], hederData[BONE_INDEX_SIZE], 1, fp);
 			fread(&boneindes[1], hederData[BONE_INDEX_SIZE], 1, fp);
-			vertice[i].born[0] = boneindes[0];
-			vertice[i].born[1] = boneindes[1];
-			vertice[i].born[2] = -1;
-			vertice[i].born[3] = -1;
-			fread(&vertice[i].weight.x, sizeof(float), 1, fp);
-			vertice[i].weight.y = 1.0f - vertice[i].weight.x;
-			fread(&vertice[i].c, sizeof(XMFLOAT3), 1, fp);
-			fread(&vertice[i].r0, sizeof(XMFLOAT3), 1, fp);
-			fread(&vertice[i].r1, sizeof(XMFLOAT3), 1, fp);
+			m_vertice[i].born[0] = boneindes[0];
+			m_vertice[i].born[1] = boneindes[1];
+			m_vertice[i].born[2] = -1;
+			m_vertice[i].born[3] = -1;
+			fread(&m_vertice[i].weight.x, sizeof(float), 1, fp);
+			m_vertice[i].weight.y = 1.0f - m_vertice[i].weight.x;
+			fread(&m_vertice[i].c, sizeof(XMFLOAT3), 1, fp);
+			fread(&m_vertice[i].r0, sizeof(XMFLOAT3), 1, fp);
+			fread(&m_vertice[i].r1, sizeof(XMFLOAT3), 1, fp);
 			break;
 		}
 
-		fread(&vertice[i].edgenif, sizeof(float), 1, fp);
+		fread(&m_vertice[i].edgenif, sizeof(float), 1, fp);
 	}
 
 	//インデックス
@@ -828,21 +794,8 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		uint8_t panel;
 		uint8_t type;
 		int offsetnum;
-
-	};
-	struct Moftvertex
-	{
-		int idx;
-		XMFLOAT3 pos;
-	};
-	struct MoftUV
-	{
-		int idx;
-		XMFLOAT4 pos;
 	};
 	std::vector<PMXmorfdata> morfdata(morfnum);
-	std::vector<Moftvertex> morfvertex;
-	std::vector<MoftUV> morfuv;
 	for (int i = 0; i < morfnum; i++)
 	{
 		getPMXStringUTF16(fp, morfdata[i].name);
@@ -855,23 +808,24 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		case 0:
 			break;
 		case 1:
-			morfvertex.resize(morfdata[i].offsetnum);
-
+			m_morphsData[morfdata[i].name].resize(morfdata[i].offsetnum);
 			for (int j = 0; j < morfdata[i].offsetnum; j++)
 			{
-				fread(&morfvertex[j].idx, hederData[VERTEX_INDEX_SIZE], 1, fp);
-				fread(&morfvertex[j].pos, sizeof(XMFLOAT3), 1, fp);
+				fread(&m_morphsData[morfdata[i].name][j].vertexIndex, hederData[VERTEX_INDEX_SIZE], 1, fp);
+				fread(&m_morphsData[morfdata[i].name][j].posval, sizeof(XMFLOAT3), 1, fp);
+				m_morphsData[morfdata[i].name][j].uv = { 0,0,0,0 };
 			}
+			
 			break;
 		case 2:
 			break;
 		case 3:
-			morfuv.resize(morfdata[i].offsetnum);
-
+			m_morphsData[morfdata[i].name].resize(morfdata[i].offsetnum);
 			for (int j = 0; j < morfdata[i].offsetnum; j++)
 			{
-				fread(&morfuv[j].idx, hederData[VERTEX_INDEX_SIZE], 1, fp);
-				fread(&morfuv[j].pos, sizeof(XMFLOAT4), 1, fp);
+				fread(&m_morphsData[morfdata[i].name][j].vertexIndex, hederData[VERTEX_INDEX_SIZE], 1, fp);
+				fread(&m_morphsData[morfdata[i].name][j].uv, sizeof(XMFLOAT4), 1, fp);
+				m_morphsData[morfdata[i].name][j].posval = { 0,0,0 };
 			}
 			break;
 		case 4:
@@ -919,7 +873,7 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 	//バッファ書き込み
 
 	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(vertice.size() * sizeof(vertice[0]));
+	auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(m_vertice.size() * sizeof(m_vertice[0]));
 
 	auto result = m_dx12.Device()->CreateCommittedResource(
 		&heapProp,
@@ -932,11 +886,11 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 	//モーフ更新のためUnmapしない
 	PMXVertice* vertMap = nullptr;
 	result = m_vb->Map(0, nullptr, (void**)&vertMap);
-	std::copy(vertice.begin(), vertice.end(), vertMap);
+	std::copy(m_vertice.begin(), m_vertice.end(), vertMap);
 
 	m_vbView.BufferLocation = m_vb->GetGPUVirtualAddress();//バッファの仮想アドレス
-	m_vbView.SizeInBytes = vertice.size() * sizeof(PMXVertice);//全バイト数
-	m_vbView.StrideInBytes = sizeof(vertice[0]);//1頂点あたりのバイト数
+	m_vbView.SizeInBytes = m_vertice.size() * sizeof(PMXVertice);//全バイト数
+	m_vbView.StrideInBytes = sizeof(m_vertice[0]);//1頂点あたりのバイト数
 
 	auto resDescBuf = CD3DX12_RESOURCE_DESC::Buffer(indices.size() * sizeof(indices[0]));
 
@@ -1032,6 +986,20 @@ bool PMXmodel::getPMXStringUTF16(FILE* file, std::wstring& outpath)
 
 void PMXmodel::UpdateModelMorf()
 {
+	m_motion->GetMorphNameFromFrame(m_morphsName, m_morphsWeight);
+	for (auto mn : m_morphsName)
+	{
+		for (auto md : m_morphsData[mn])
+		{
+			m_vertice[md.vertexIndex].pos = m_originalVertices[md.vertexIndex].pos + (md.posval * m_morphsWeight[mn]);
+			m_vertice[md.vertexIndex].uv.x = m_originalVertices[md.vertexIndex].uv.x + (md.uv.x * m_morphsWeight[mn]);
+			m_vertice[md.vertexIndex].uv.y = m_originalVertices[md.vertexIndex].uv.y + (md.uv.y * m_morphsWeight[mn]);
+		}
+	}
+	PMXVertice* vertMap = nullptr;
+	auto result = m_vb->Map(0, nullptr, (void**)&vertMap);
+	std::copy(m_vertice.begin(), m_vertice.end(), vertMap);
+
 }
 
 std::wstring PMXmodel::ChangeCNToJP(std::wstring path)
