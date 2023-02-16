@@ -23,8 +23,8 @@ struct Polygon
 
 struct MatAndQuat
 {
-    matrix bones;
     float4 quat;
+    matrix bones;
 
 };
 
