@@ -81,7 +81,7 @@ PMDmodel::PMDmodel(const char* filepath, Render& dx12) : Model(dx12)
 	result = CreateMaterialData();
 	result = CreateMaterialAndTextureView();
 	RecursiveMatrixMultiply(&m_boneNodetable["センター"], XMMatrixIdentity());
-	std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
+	std::copy(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), m_mappeboneMatAndQuats + 1);
 
 }
 
@@ -92,7 +92,8 @@ PMDmodel::~PMDmodel()
 
 void PMDmodel::Update(XMMATRIX& martrix)
 {
-	m_mappedMartrices[0] = martrix;
+
+	m_mappeboneMatAndQuats[0].boneMatrieces = martrix;
 	if (m_motion)
 	{
 		if (m_motion->GetMotionFlag())
@@ -102,7 +103,7 @@ void PMDmodel::Update(XMMATRIX& martrix)
 		}
 		//IKSolve(m_motion->GetFrameNo());
 
-		std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
+		std::copy(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), m_mappeboneMatAndQuats + 1);
 
 		m_motion->GetMorphNameFromFrame(m_morphsName, m_morphsWeight);
 
@@ -435,7 +436,7 @@ HRESULT PMDmodel::CreateMaterialAndTextureView()
 HRESULT PMDmodel::CreateTransformView()
 {
 	//GPUバッファ作成
-	auto buffSize = sizeof(XMMATRIX) * (1 + m_boneMatrieces.size());
+	auto buffSize = sizeof(MatAndQuat) * (1 + m_boneMatAndQuat.size());
 	buffSize = (buffSize + 0xff) & ~0xff;
 	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(buffSize);
@@ -455,15 +456,15 @@ HRESULT PMDmodel::CreateTransformView()
 	}
 
 	//マップとコピー
-	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappedMartrices);
+	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappeboneMatAndQuats);
 	if (FAILED(result)) 
 	{
 		assert(SUCCEEDED(result));
 		return result;
 	}
-	m_mappedMartrices[0] = m_transform.world;
+	m_mappeboneMatAndQuats[0].boneMatrieces = m_transform.world;
 
-	std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
+	std::copy(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), m_mappeboneMatAndQuats + 1);
 
 	//ビューの作成
 	D3D12_DESCRIPTOR_HEAP_DESC transformDescHeapDesc = {};
@@ -757,10 +758,14 @@ HRESULT PMDmodel::LoadPMDFile(const char* path)
 		m_boneNodetable[parentname].children.emplace_back(&m_boneNodetable[pb.bonename]);
 	}
 
-	m_boneMatrieces.resize(pmdbones.size());
+	m_boneMatAndQuat.resize(pmdbones.size());
 
 	//ボーンを初期化
-	std::fill(m_boneMatrieces.begin(), m_boneMatrieces.end(), XMMatrixIdentity());
+	MatAndQuat Identity;
+	Identity.boneMatrieces = XMMatrixIdentity();
+	Identity.boneQuatanions = {};
+
+	std::fill(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), Identity);
 	
 	uint16_t iknum = 0;
 	fread(&iknum, sizeof(iknum), 1, fp);
@@ -976,10 +981,10 @@ void PMDmodel::SolveCCDIK(const PMDIK& ik)
 	auto tagetbonenode = m_boneNodeAddressArray[ik.boneIdx];
 	auto tagetoriginpos = XMLoadFloat3(&tagetbonenode->startPos);
 
-	const auto& parentmat = m_boneMatrieces[m_boneNodeAddressArray[ik.targetIdx]->boneidx];
+	const auto& parentmat = m_boneMatAndQuat[m_boneNodeAddressArray[ik.targetIdx]->boneidx].boneMatrieces;
 	XMVECTOR det = {};
 	auto invparentmat = XMMatrixInverse(&det, parentmat);
-	auto targetnextpos = XMVector3Transform(tagetoriginpos, m_boneMatrieces[ik.boneIdx] * invparentmat);
+	auto targetnextpos = XMVector3Transform(tagetoriginpos, m_boneMatAndQuat[ik.boneIdx].boneMatrieces * invparentmat);
 
 	//IKの間にあるボーンの座標を入れておく(逆順注意)
 	std::vector<XMVECTOR> bonepositions;
@@ -987,7 +992,7 @@ void PMDmodel::SolveCCDIK(const PMDIK& ik)
 	auto endpos = XMLoadFloat3(&m_boneNodeAddressArray[ik.targetIdx]->startPos);
 	//endpos = XMVector3Transform(
 	//XMLoadFloat3(&m_boneNodeAddressArray[ik.targetIdx]->startPos),
-	////m_boneMatrieces[ik.targetIdx]);
+	////m_boneMatAndQuat[ik.targetIdx]);
 	//XMMatrixIdentity());
 
 
@@ -996,7 +1001,7 @@ void PMDmodel::SolveCCDIK(const PMDIK& ik)
 	{
 		bonepositions.push_back(XMLoadFloat3(&m_boneNodeAddressArray[cidx]->startPos));
 		//bonepositions.emplace_back(XMVector3Transform(XMLoadFloat3(&m_boneNodeAddressArray[cidx]->startPos),
-		//m_boneMatrieces[cidx] ));
+		//m_boneMatAndQuat[cidx] ));
 	}
 
 	std::vector<XMMATRIX> mats(bonepositions.size());
@@ -1049,7 +1054,7 @@ void PMDmodel::SolveCCDIK(const PMDIK& ik)
 	int idx = 0;
 	for (auto& cidx : ik.nodeIdxes)
 	{
-		m_boneMatrieces[cidx] = mats[idx];
+		m_boneMatAndQuat[cidx].boneMatrieces = mats[idx];
 		++idx;
 	}
 	auto node = m_boneNodeAddressArray[ik.nodeIdxes.back()];
@@ -1063,7 +1068,7 @@ void PMDmodel::SolveCosineIK(const PMDIK& ik)
 
 	//ターゲット（末端ボーンではなく、末端ボーンが近づく目標ボーンの座標を取得）
 	auto& tagetnode = m_boneNodeAddressArray[ik.boneIdx];
-	auto targetpos = XMVector3Transform(XMLoadFloat3(&tagetnode->startPos), m_boneMatrieces[ik.boneIdx]);
+	auto targetpos = XMVector3Transform(XMLoadFloat3(&tagetnode->startPos), m_boneMatAndQuat[ik.boneIdx].boneMatrieces);
 
 	//IKチェーンが逆順なので逆に並ぶように
 	//末端ボーン
@@ -1085,9 +1090,9 @@ void PMDmodel::SolveCosineIK(const PMDIK& ik)
 	edgelens[1] = XMVector3Length(XMVectorSubtract(positions[2], positions[1])).m128_f32[0];
 
 	//ルートボーン座標変換(逆順になっているため使用するインデックスに注意)
-	positions[0] = XMVector3Transform(positions[0], m_boneMatrieces[ik.nodeIdxes[1]]);
+	positions[0] = XMVector3Transform(positions[0], m_boneMatAndQuat[ik.nodeIdxes[1]].boneMatrieces);
 	//先端ボーン
-	positions[2] = XMVector3Transform(positions[2], m_boneMatrieces[ik.boneIdx]);
+	positions[2] = XMVector3Transform(positions[2], m_boneMatAndQuat[ik.boneIdx].boneMatrieces);
 
 	//ルートから端末へのベクトルを作る
 	auto linearvec = XMVectorSubtract(positions[2], positions[0]);
@@ -1145,9 +1150,9 @@ void PMDmodel::SolveCosineIK(const PMDIK& ik)
 	mat2 *= XMMatrixTranslationFromVector(positions[1]);
 
 
-	m_boneMatrieces[ik.nodeIdxes[1]] *= mat1;
-	m_boneMatrieces[ik.nodeIdxes[0]] = mat2 * m_boneMatrieces[ik.nodeIdxes[1]];
-	m_boneMatrieces[ik.targetIdx] = m_boneMatrieces[ik.nodeIdxes[0]] ;
+	m_boneMatAndQuat[ik.nodeIdxes[1]].boneMatrieces *= mat1;
+	m_boneMatAndQuat[ik.nodeIdxes[0]].boneMatrieces = mat2 * m_boneMatAndQuat[ik.nodeIdxes[1]].boneMatrieces;
+	m_boneMatAndQuat[ik.targetIdx] = m_boneMatAndQuat[ik.nodeIdxes[0]] ;
 	
 }
 
@@ -1160,8 +1165,8 @@ void PMDmodel::SolveLookAt(const PMDIK& ik)
 	auto opos1 = XMLoadFloat3(&rootnode->startPos);
 	auto tpos1 = XMLoadFloat3(&tagetnode->startPos);
 
-	auto opos2 = XMVector3Transform(opos1, m_boneMatrieces[ik.nodeIdxes[0]]);
-	auto tpos2 = XMVector3Transform(tpos1, m_boneMatrieces[ik.boneIdx]);
+	auto opos2 = XMVector3Transform(opos1, m_boneMatAndQuat[ik.nodeIdxes[0]].boneMatrieces);
+	auto tpos2 = XMVector3Transform(tpos1, m_boneMatAndQuat[ik.boneIdx].boneMatrieces);
 
 	auto originvec = XMVectorSubtract(tpos1, opos1);
 	auto targetvec = XMVectorSubtract(tpos2, opos2);
@@ -1183,14 +1188,14 @@ void PMDmodel::SolveLookAt(const PMDIK& ik)
 	XMVECTOR scalnode;
 	XMVECTOR rotparent;
 
-	XMMatrixDecompose(&scalnode, &rotparent, &tarnsnode, m_boneMatrieces[parent]);
-	XMMatrixDecompose(&scalnode, &rotnode, &tarnsnode, m_boneMatrieces[ik.nodeIdxes[0]]);
+	XMMatrixDecompose(&scalnode, &rotparent, &tarnsnode, m_boneMatAndQuat[parent].boneMatrieces);
+	XMMatrixDecompose(&scalnode, &rotnode, &tarnsnode, m_boneMatAndQuat[ik.nodeIdxes[0]].boneMatrieces);
 
-	//m_boneMatrieces[ik.nodeIdxes[0]] = XMMatrixAffineTransformation(scalnode, rotnode, rotparent, tarnsnode) * mat;
-	//m_boneMatrieces[ik.targetIdx] = m_boneMatrieces[parent];
-	m_boneMatrieces[ik.nodeIdxes[0]] = ( m_boneMatrieces[ik.boneIdx] * m_boneMatrieces[parent]);
-	m_boneMatrieces[ik.targetIdx] = m_boneMatrieces[parent];
-	m_boneMatrieces[parent] = m_boneMatrieces[ik.nodeIdxes[0]];
+	//m_boneMatAndQuat[ik.nodeIdxes[0]] = XMMatrixAffineTransformation(scalnode, rotnode, rotparent, tarnsnode) * mat;
+	//m_boneMatAndQuat[ik.targetIdx] = m_boneMatAndQuat[parent];
+	m_boneMatAndQuat[ik.nodeIdxes[0]].boneMatrieces = ( m_boneMatAndQuat[ik.boneIdx].boneMatrieces * m_boneMatAndQuat[parent].boneMatrieces);
+	m_boneMatAndQuat[ik.targetIdx].boneMatrieces = m_boneMatAndQuat[parent].boneMatrieces;
+	m_boneMatAndQuat[parent].boneMatrieces = m_boneMatAndQuat[ik.nodeIdxes[0]].boneMatrieces;
 
 }
 

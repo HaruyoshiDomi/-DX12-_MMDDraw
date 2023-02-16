@@ -114,11 +114,11 @@ ID3D12Resource* Model::CreateGrayGradationTexture()
 
 void Model::RecursiveMatrixMultiply(BoneNode* node, const XMMATRIX& mat, bool flag)
 {
-	m_boneMatrieces[node->boneidx] *= mat;
+	m_boneMatAndQuat[node->boneidx].boneMatrieces *= mat;
 
 	for (auto& cnode : node->children)
 	{
-		RecursiveMatrixMultiply(cnode, m_boneMatrieces[node->boneidx]);
+		RecursiveMatrixMultiply(cnode, m_boneMatAndQuat[node->boneidx].boneMatrieces);
 	}
 }
 

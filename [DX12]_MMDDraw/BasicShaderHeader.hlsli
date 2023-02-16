@@ -21,6 +21,13 @@ struct Polygon
     float2 uv : TEXCOORD;
 };
 
+struct MatAndQuat
+{
+    matrix bones;
+    float4 quat;
+
+};
+
 Texture2D<float4> tex : register(t0);
 Texture2D<float4> sph : register(t1);
 Texture2D<float4> spa : register(t2);
@@ -43,7 +50,7 @@ cbuffer SceneData : register(b0)
 cbuffer Transform : register(b1)
 {
     matrix world; //ワールド変換行列
-    matrix bones[512];
+    MatAndQuat mq[512];
 }
 
 //定数バッファ1

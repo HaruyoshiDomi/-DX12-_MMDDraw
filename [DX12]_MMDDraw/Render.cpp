@@ -55,7 +55,7 @@ HRESULT Render::Init(const HWND& hwnd)
 	}
 	//m_modelTabel.push_back(new PMDmodel("asset/Model/PMD/結月ゆかり_純_ver1.0/結月ゆかり_純_ver1.0.pmd", *this));
 	m_modelTabel.push_back(new PMDmodel("asset/Model/PMD/Lat式ミクVer2.31/Lat式ミクVer2.31_Normal.pmd", *this));
-	m_modelTabel.push_back(new PMXmodel("asset/Model//PMX/ゆかりver7/ゆかりver7.pmx", *this));
+	//m_modelTabel.push_back(new PMXmodel("asset/Model//PMX/ゆかりver7/ゆかりver7.pmx", *this));
 	Manager::Init();
 
 	return S_OK;
@@ -619,9 +619,9 @@ void Render::CameraUpdate()
 		XMFLOAT2 nowpos = { mousestate->x, mousestate->y };
 		XMFLOAT2 distans = nowpos - m_oldMousePos;
 		if (distans.x > 0)
-			m_parallelLightVec.x += 0.1f;
+			m_parallelLightVec.z += 0.1f;
 		if (distans.x < 0)
-			m_parallelLightVec.x -= 0.1f;
+			m_parallelLightVec.z -= 0.1f;
 	}
 
 	m_mappedSceneData->view = XMMatrixLookAtLH(XMLoadFloat3(&m_eye), XMLoadFloat3(&m_target), XMLoadFloat3(&m_up));

@@ -15,16 +15,16 @@ Model main(float4 pos : POSITION, float4 normal : NORMAL, float2 uv : TEXCOORD, 
     switch (type)
     {
         case 0:
-            bm = bones[boneno.x] * w1;
+            bm = mq[boneno.x].bones * w1;
             break;
         case 1:
-            bm = bones[boneno.x] * w1 + bones[boneno.y] * w2;
+            bm = mq[boneno.x].bones * w1 + mq[boneno.y].bones * w2;
             break;
         case 2:
-            bm = bones[boneno.x] * w1 + bones[boneno.y] * w2 + bones[boneno.z] * w3 + bones[boneno.w] * w4;
+            bm = mq[boneno.x].bones * w1 + mq[boneno.y].bones * w2 + mq[boneno.z].bones * w3 + mq[boneno.w].bones * w4;
             break;
         case 3:
-            bm = bones[boneno.x] * w1 + bones[boneno.y] * w2;
+            bm = mq[boneno.x].bones * w1 + mq[boneno.y].bones * w2;
             break;
     }
   
@@ -44,7 +44,36 @@ Model main(float4 pos : POSITION, float4 normal : NORMAL, float2 uv : TEXCOORD, 
     return output;
 }
 
-matrix SDEF(float w1, float w2, min16uint2 b)
+void CalcSdefWeight(out float weight0, out float weight1, in float3 defR0, in float3 defR1)
 {
-    return matrix(bones[b.x] * w1 + bones[b.y] * w2);
+    float leng0 = length(defR0);
+    float leng1 = length(defR1);
+    if (abs(leng0 - leng1) < 0.00001f)
+    {
+        weight1 = 0.5f;
+    }
+    else
+    {
+        weight1 = saturate(leng0 / (leng0 + leng1));
+    }
+    weight0 = 1.0f - weight1;
+}
+
+matrix SDEF(float w0, float w1, int2 b, float3 R0, float3 R1, float3 c, matrix m0, matrix m1)
+{
+    float w2, w3;
+    CalcSdefWeight(w2, w3, R0, R1);
+    //C“_ŽZo
+    float4 r0 = float4(R0 + c, 1);
+    float4 r1 = float4(R1 + c, 1);
+    matrix mrc = m0 * w0 + m1 * w1;
+    float3 prc = mul(float4(c, 1), mrc).xyz;
+    
+    //r0,r1‚É‚æ‚é·•ª‚ðŽZo‚µ‚Ä‰ÁŽZ
+    {
+        matrix m2 = m0 * w0;
+        matrix m3 = m1 * w1;
+        matrix m = m2 + m3;
+        
+    }
 }

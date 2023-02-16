@@ -5,7 +5,7 @@ Model main(float4 pos : POSITION, float4 normal : NORMAL, float2 uv : TEXCOORD, 
 {
     Model output; //ピクセルシェーダへ渡す値
     float w = (float)weight / 100.0f;
-    matrix bm = bones[boneno.x] * w + bones[boneno.y] * (1 - w);
+    matrix bm = mq[boneno.x].bones * w + mq[boneno.y].bones * (1 - w);
     pos = mul(bm, pos);
     pos = mul(world, pos);
     output.svpos = mul(mul(proj, view), pos);            //シェーダでは列優先なので注意

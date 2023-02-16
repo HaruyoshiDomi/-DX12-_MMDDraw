@@ -61,13 +61,21 @@ protected:
 	ComPtr<ID3D10Blob> m_VSBlob = nullptr;
 	ComPtr<ID3D10Blob> m_PSBlob = nullptr;
 
+	struct MatAndQuat
+	{
+		XMMATRIX boneMatrieces;
+		XMFLOAT4 boneQuatanions;
+	};
+
 	Transform m_transform;
 	Transform* m_mappedTransform = nullptr;
 
 	XMMATRIX* m_mappedMartrices = nullptr;
+	MatAndQuat* m_mappeboneMatAndQuats = nullptr;
 
 	//É{Å[Éìä÷òA
 	std::vector<XMMATRIX> m_boneMatrieces;
+	std::vector<MatAndQuat> m_boneMatAndQuat;
 	std::vector<uint32_t> m_kneeIdx;
 	std::map<std::string, BoneNode> m_boneNodetable;
 	std::vector<std::string> m_boneNameArray;
