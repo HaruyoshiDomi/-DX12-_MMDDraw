@@ -9,16 +9,16 @@ public:
 	ID3D12PipelineState* GetPipelineState() { return m_pipeline.Get(); }
 	ID3D12RootSignature* GetRootSignature() { return m_rootSignature.Get(); }
 
-	std::vector<XMMATRIX>* GetBoneMatrix() { return &m_boneMatrieces; }
 
 	void SetMotion(class VMDmotion* motion);
 	class VMDmotion* GetMotion() { return m_motion; };
+	std::string GetName() { return m_name; }
 
 private:
 
 
-
 protected:
+	std::string m_name = {};
 
 	struct Transform
 	{
@@ -72,6 +72,7 @@ protected:
 
 	XMMATRIX* m_mappedMartrices = nullptr;
 	MatAndQuat* m_mappeboneMatAndQuats = nullptr;
+	MatAndQuat m_MatAndQuatsIdentity;
 
 	//É{Å[Éìä÷òA
 	std::vector<XMMATRIX> m_boneMatrieces;
@@ -112,6 +113,7 @@ protected:
 
 public:
 	std::map<std::string, BoneNode>* GetBoneNodeTable() { return &m_boneNodetable; }
-
+	std::vector<MatAndQuat>* GetBoneMatrixAndQuatanion() { return &m_boneMatAndQuat; }
+	MatAndQuat MatAndQuatIdentity() { return m_MatAndQuatsIdentity; }
 };
 

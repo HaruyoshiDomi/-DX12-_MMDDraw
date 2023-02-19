@@ -51,12 +51,11 @@ public:
 	ComPtr<ID3D12Device> Device() { return m_dev; }
 	ComPtr<ID3D12GraphicsCommandList> CommandList() { return m_cmdList; }
 	ComPtr<ID3D12Resource> GetShadowTexture();
-
+	ComPtr<ID3D12DescriptorHeap> GetHeapForImgui() { return m_heapForImgui; }
 	void SetSceneView();
 	class Model* GetLodedModel(int num = 0);
 	int GetCharacterNum() { return m_modelTabel.size(); }
 	void CameraUpdate();
-
 	~Render();
 
 private:
@@ -89,6 +88,8 @@ private:
 	ComPtr<ID3D12DescriptorHeap> m_peraRTVHeap = nullptr;
 	ComPtr<ID3D12DescriptorHeap> m_peraSRVHeap = nullptr;
 
+	ComPtr<ID3D12DescriptorHeap> m_heapForImgui = nullptr;
+
 	struct SceneData
 	{
 		XMMATRIX view;//ビュープロジェクション行列
@@ -114,6 +115,7 @@ private:
 	std::map<std::string, LoadLamda_t> m_loadLamdatable = {};
 	std::unordered_map<std::string, ComPtr<ID3D12Resource>> m_textureTable;
 	std::vector<class Model*> m_modelTabel = {};
+	std::vector<std::string> m_modelNameTabel = {};
 	XMFLOAT4 m_clarColer = {}; //レンダリング時のクリアカラー
 
 	void CreateTextureLoaderTable();
@@ -125,12 +127,13 @@ private:
 	HRESULT CreateFinalRenderTargets();
 	HRESULT CreateSceneView();
 	HRESULT CreateDepthStencilView();
+	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeapForImgui();
 
 	bool CreatePeraResourcesAndView();
 
 	void BeginDraw();
 	void EndDraw();
-
+	void ImguiDrawing();
 	void InitCamera(DXGI_SWAP_CHAIN_DESC1& desc);
 	
 };

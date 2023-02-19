@@ -7,6 +7,9 @@
 #include "PMXmodel.h"
 #include "Character.h"
 #include "XMFLOAT_Helper.h"
+#include"imgui\imgui.h"
+#include"imgui\imgui_impl_win32.h"
+#include"imgui\imgui_impl_dx12.h"
 #include "Render.h"
 
 Render* Render::m_instance = nullptr;
@@ -53,25 +56,38 @@ HRESULT Render::Init(const HWND& hwnd)
 		assert(0);
 		return S_FALSE;
 	}
-	//m_modelTabel.push_back(new PMDmodel("asset/Model/PMD/結月ゆかり_純_ver1.0/結月ゆかり_純_ver1.0.pmd", *this));
+
+	m_heapForImgui = CreateDescriptorHeapForImgui();
+	if(!m_heapForImgui)
+		return S_FALSE;
+
+	m_modelTabel.push_back(new PMDmodel("asset/Model/PMD/結月ゆかり_純_ver1.0/結月ゆかり_純_ver1.0.pmd", *this));
 	m_modelTabel.push_back(new PMDmodel("asset/Model/PMD/Lat式ミクVer2.31/Lat式ミクVer2.31_Normal.pmd", *this));
-	//m_modelTabel.push_back(new PMXmodel("asset/Model//PMX/ゆかりver7/ゆかりver7.pmx", *this));
-	Manager::Init();
+	m_modelTabel.push_back(new PMXmodel("asset/Model//PMX/ゆかりver7/ゆかりver7.pmx", *this));
+	for (int i = 0; i < m_modelTabel.size(); i++)
+	{
+		m_modelNameTabel.push_back(m_modelTabel[i]->GetName());
+	}
+	Manager::GetInstance()->Init();
 
 	return S_OK;
 }
 
 void Render::Update()
 {
-	Manager::Update();
+	CameraUpdate();
+	Manager::GetInstance()->Update();
 }
-
+	bool cb = false;
+	int nsl = 0;
+	float fsl = 0.0f;
 void Render::Draw()
 {
 	BeginDraw();
 
-	Manager::Draw();
+	Manager::GetInstance()->Draw();
 
+	ImguiDrawing();
 	EndDraw();
 	m_swapchain->Present(1, 0);
 }
@@ -80,7 +96,7 @@ void Render::Uninit()
 {
 	delete m_instance;
 	m_instance = nullptr;
-	Manager::Uninit();
+	Manager::GetInstance()->Uninit();
 	for (auto& model : m_modelTabel)
 	{
 		delete model;
@@ -539,6 +555,49 @@ void Render::EndDraw()
 	m_cmdList->Reset(m_cmdAllocator.Get(), nullptr);//再びコマンドリストをためる準備
 }
 
+void Render::ImguiDrawing()
+{
+	auto crt = Manager::GetInstance()->GetObjects<Character>();
+	static int modelnum = 0;
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::Begin("Setting");
+	ImGui::SetWindowSize(ImVec2(400, 500), ImGuiCond_::ImGuiCond_FirstUseEver);
+	ImGui::Checkbox("CheckBOX Test", &cb);
+	ImGui::SliderFloat("Lighting_X", &m_parallelLightVec.x, -30.0f, 30.0f);
+	ImGui::SliderFloat("Lighting_Z", &m_parallelLightVec.z, -30.0f, 30.0f);
+	ImGui::SliderInt("ChangeModel", &modelnum, 0, m_modelTabel.size() - 1);
+	for (auto c : crt)
+	{
+		if (!c->GetMotionFlag())
+		{
+			if (ImGui::Button("AutoRotation_Y"))
+				c->AutoRotation();
+			ImGui::SameLine();
+			if (ImGui::Button("ResetRotate"))
+				c->ResetRotate();
+			if (ImGui::Button("SetMotion"))
+				c->SetMotion();
+		}
+		else
+		{
+			if (ImGui::Button("PLAY MOTION"))
+				c->MotionPlayAndStop();
+			if (ImGui::Button("RESET MOTION"))
+				c->ResetMotion();
+		}
+		c->SetModel(modelnum);
+	}
+
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	ImGui::End();
+	ImGui::Render();
+	m_cmdList->SetDescriptorHeaps(1, m_heapForImgui.GetAddressOf());
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_cmdList.Get());
+}
+
 void Render::InitCamera(DXGI_SWAP_CHAIN_DESC1& desc)
 {
 	m_eye = XMFLOAT3(0, 15, -15);
@@ -614,16 +673,6 @@ void Render::CameraUpdate()
 		m_target = XMFLOAT3(0, 15, 15);
 	}
 
-	if (mousestate->leftButton)
-	{
-		XMFLOAT2 nowpos = { mousestate->x, mousestate->y };
-		XMFLOAT2 distans = nowpos - m_oldMousePos;
-		if (distans.x > 0)
-			m_parallelLightVec.z += 0.1f;
-		if (distans.x < 0)
-			m_parallelLightVec.z -= 0.1f;
-	}
-
 	m_mappedSceneData->view = XMMatrixLookAtLH(XMLoadFloat3(&m_eye), XMLoadFloat3(&m_target), XMLoadFloat3(&m_up));
 	m_mappedSceneData->proj = XMMatrixPerspectiveFovLH(XM_PIDIV4,//画角は45°
 		static_cast<float>(desc.Width) / static_cast<float>(desc.Height),//アス比
@@ -634,6 +683,20 @@ void Render::CameraUpdate()
 	m_mappedSceneData->light = { m_parallelLightVec.x, m_parallelLightVec.y, m_parallelLightVec.z, 0 };
 	m_mappedSceneData->shadow = XMMatrixShadow(XMLoadFloat4(&planenormalvec), -XMLoadFloat3(&m_parallelLightVec));
 	m_oldMousePos = { mousestate->x, mousestate->y };
+}
+
+ComPtr<ID3D12DescriptorHeap> Render::CreateDescriptorHeapForImgui()
+{
+	ComPtr<ID3D12DescriptorHeap> ret;
+	D3D12_DESCRIPTOR_HEAP_DESC decs = {};
+	decs.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	decs.NodeMask = 0;
+	decs.NumDescriptors = 1;
+	decs.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+
+	m_dev->CreateDescriptorHeap(&decs, IID_PPV_ARGS(ret.ReleaseAndGetAddressOf()));
+
+	return ret;
 }
 
 Render::~Render()

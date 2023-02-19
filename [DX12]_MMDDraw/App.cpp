@@ -3,9 +3,15 @@
 #include "PMDmodel.h"
 #include <thread>
 #include "Mouse.h"
+#include"imgui\imgui.h"
+#include"imgui\imgui_impl_win32.h"
+#include"imgui\imgui_impl_dx12.h"
+#include"imgui\imgui_ja_gryph_ranges.h"
 #include "App.h"
 
 App* App::m_instance = nullptr;
+
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
 LRESULT WindowProcedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
@@ -34,6 +40,7 @@ LRESULT WindowProcedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		Mouse::Mouse_ProcessMessage(msg, wparam, lparam);
 		break;
 	}
+	ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam);
 
 	return DefWindowProc(hwnd, msg, wparam, lparam); //既定の処理を行う
 }
@@ -64,6 +71,21 @@ HRESULT App::Init()
 	if (FAILED(m_DXrender->Init(m_hwnd)))
 		return S_FALSE;
 
+	if(!ImGui::CreateContext())
+		return S_FALSE;
+
+	bool blnresult = ImGui_ImplWin32_Init(m_hwnd);
+	if(!blnresult)
+		return S_FALSE;
+
+	blnresult = ImGui_ImplDX12_Init(
+		m_DXrender->Device().Get(),												//dx12デバイス
+		3,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		m_DXrender->GetHeapForImgui().Get(),
+		m_DXrender->GetHeapForImgui()->GetCPUDescriptorHandleForHeapStart(),
+		m_DXrender->GetHeapForImgui()->GetGPUDescriptorHandleForHeapStart()
+	);
 	Mouse::Mouse_Initialize(m_hwnd);
 
 	return S_OK;
@@ -75,8 +97,10 @@ void App::Update()
 {
 
 	ShowWindow(m_hwnd, SW_SHOW);
-
+	UpdateWindow(m_hwnd);
 	MSG msg = {};
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
 
 	while (msg.message != WM_QUIT)
 	{
@@ -97,7 +121,9 @@ void App::Update()
 
 			}
 			m_DXrender->Update();
+
 			m_DXrender->Draw();
+
 		}
 	}
 

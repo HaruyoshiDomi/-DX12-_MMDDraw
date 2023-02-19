@@ -11,7 +11,7 @@ public:
 	bool GetMotionFlag() { return m_motionFlag; }
 	uint32_t GetFrameNo() { return m_frameNo; }
 	void SetNowPose();
-
+	void ResetMotion();
 	struct VMDIKEnable
 	{
 		uint32_t frameNo = 0;

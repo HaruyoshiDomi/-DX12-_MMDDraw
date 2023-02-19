@@ -24,7 +24,7 @@ PMXmodel::~PMXmodel()
 
 void PMXmodel::Update(XMMATRIX& martrix)
 {
-	m_mappedMartrices[0] = martrix;
+	m_mappeboneMatAndQuats[0].boneMatrieces = martrix;
 	if (m_motion)
 	{
 		if (m_motion->GetMotionFlag())
@@ -32,7 +32,7 @@ void PMXmodel::Update(XMMATRIX& martrix)
 			m_motion->UpdateMotion();
 			RecursiveMatrixMultiply(&m_boneNodetable["センター"], XMMatrixIdentity());
 		}
-		std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
+		std::copy(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), m_mappeboneMatAndQuats + 1);
 		this->UpdateModelMorf();
 	}
 
@@ -342,7 +342,7 @@ HRESULT PMXmodel::CreateMaterialAndTextureView()
 HRESULT PMXmodel::CreateTransformView()
 {
 	//GPUバッファ作成
-	auto buffSize = sizeof(XMMATRIX) * (1 + m_boneMatrieces.size());
+	auto buffSize = sizeof(MatAndQuat) * (1 + m_boneMatAndQuat.size());
 	buffSize = (buffSize + 0xff) & ~0xff;
 	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(buffSize);
@@ -362,15 +362,15 @@ HRESULT PMXmodel::CreateTransformView()
 	}
 
 	//マップとコピー
-	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappedMartrices);
+	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappeboneMatAndQuats);
 	if (FAILED(result))
 	{
 		assert(SUCCEEDED(result));
 		return result;
 	}
-	m_mappedMartrices[0] = m_transform.world;
+	m_mappeboneMatAndQuats[0].boneMatrieces = m_transform.world;
 
-	std::copy(m_boneMatrieces.begin(), m_boneMatrieces.end(), m_mappedMartrices + 1);
+	std::copy(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), m_mappeboneMatAndQuats + 1);
 
 	//ビューの作成
 	D3D12_DESCRIPTOR_HEAP_DESC transformDescHeapDesc = {};
@@ -465,7 +465,7 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 		getPMXStringUTF16(fp, name[i]);
 		std::cout << helper::GetStringFromWideString(name[i]).c_str() << std::endl;
 	}
-
+	m_name = helper::GetStringFromWideString(name[0]).c_str();
 
 	uint32_t numVer = 0;
 
@@ -670,12 +670,12 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 	};
 
 	fread(&bonenum, sizeof(bonenum), 1, fp);
-	m_boneMatrieces.resize(bonenum);
+	m_boneMatAndQuat.resize(bonenum);
 	m_boneNameArray.resize(bonenum);
 	m_boneNodeAddressArray.resize(bonenum);
 	std::vector<PMXbone> bone(bonenum);
 	//ボーンを初期化
-	std::fill(m_boneMatrieces.begin(), m_boneMatrieces.end(), XMMatrixIdentity());
+	std::fill(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), m_MatAndQuatsIdentity);
 
 	//ボーン情報読み込み
 	{

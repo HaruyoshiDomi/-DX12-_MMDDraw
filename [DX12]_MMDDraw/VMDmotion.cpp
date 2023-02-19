@@ -22,9 +22,9 @@ void VMDmotion::UpdateMotion()
 			m_frameNo = 0;
 		}
 		std::cout << m_frameNo << "：" << m_duration << std::endl;
-		auto bonemat = m_model->GetBoneMatrix();
+		auto bonemat = m_model->GetBoneMatrixAndQuatanion();
 		//行列情報クリア
-		std::fill(bonemat->begin(), bonemat->end(), XMMatrixIdentity());
+		std::fill(bonemat->begin(), bonemat->end(), m_model->MatAndQuatIdentity());
 
 		for (auto& bonemotion : m_motionData)
 		{
@@ -50,19 +50,22 @@ void VMDmotion::UpdateMotion()
 			{
 				auto t = (float)(m_frameNo - rit->frameNo) / (float)(it->frameNo - rit->frameNo);
 				t = GetYFromXOnBezier(t, it->p1, it->p2, 12);
-				rotation = XMMatrixRotationQuaternion(XMQuaternionSlerp(rit->quaternion, it->quaternion, t));
+				auto quatvec = XMQuaternionSlerp(rit->quaternion, it->quaternion, t);
+				rotation = XMMatrixRotationQuaternion(quatvec);
+				XMStoreFloat4(&(*bonemat)[node.boneidx].boneQuatanions, quatvec);
 				offset = XMVectorLerp(offset, XMLoadFloat3(&it->offset), t);
 			}
 			else
 			{
 				rotation = XMMatrixRotationQuaternion(rit->quaternion);
+				XMStoreFloat4(&(*bonemat)[node.boneidx].boneQuatanions, rit->quaternion);
 			}
 			auto& pos = node.startPos;
 
 			auto mat = XMMatrixTranslation(-pos.x, -pos.y, -pos.z)
 				* rotation
 				* XMMatrixTranslation(pos.x, pos.y, pos.z);
-			(*bonemat)[node.boneidx] = mat * XMMatrixTranslationFromVector(offset);
+			(*bonemat)[node.boneidx].boneMatrieces = mat * XMMatrixTranslationFromVector(offset);
 		}
 	}
 
@@ -84,9 +87,10 @@ void VMDmotion::SetMotionFlag(bool flag)
 void VMDmotion::SetNowPose()
 {
 	std::cout << m_frameNo << "：" << m_duration << std::endl;
-	auto bonemat = m_model->GetBoneMatrix();
+	auto bonemat = m_model->GetBoneMatrixAndQuatanion();
 	//行列情報クリア
-	std::fill(bonemat->begin(), bonemat->end(), XMMatrixIdentity());
+
+	std::fill(bonemat->begin(), bonemat->end(), m_model->MatAndQuatIdentity());
 
 	for (auto& bonemotion : m_motionData)
 	{
@@ -112,20 +116,29 @@ void VMDmotion::SetNowPose()
 		{
 			auto t = (float)(m_frameNo - rit->frameNo) / (float)(it->frameNo - rit->frameNo);
 			t = GetYFromXOnBezier(t, it->p1, it->p2, 12);
-			rotation = XMMatrixRotationQuaternion(XMQuaternionSlerp(rit->quaternion, it->quaternion, t));
+			auto quatvec = XMQuaternionSlerp(rit->quaternion, it->quaternion, t);
+			rotation = XMMatrixRotationQuaternion(quatvec);
+			XMStoreFloat4(&(*bonemat)[node.boneidx].boneQuatanions, quatvec);
 			offset = XMVectorLerp(offset, XMLoadFloat3(&it->offset), t);
 		}
 		else
 		{
 			rotation = XMMatrixRotationQuaternion(rit->quaternion);
+			XMStoreFloat4(&(*bonemat)[node.boneidx].boneQuatanions, rit->quaternion);
 		}
 		auto& pos = node.startPos;
 
 		auto mat = XMMatrixTranslation(-pos.x, -pos.y, -pos.z)
 			* rotation
 			* XMMatrixTranslation(pos.x, pos.y, pos.z);
-		(*bonemat)[node.boneidx] = mat * XMMatrixTranslationFromVector(offset);
+		(*bonemat)[node.boneidx].boneMatrieces = mat * XMMatrixTranslationFromVector(offset);
 	}
+}
+
+void VMDmotion::ResetMotion()
+{
+	m_frameNo = m_oldframeNo = 0;
+	SetNowPose();
 }
 
 

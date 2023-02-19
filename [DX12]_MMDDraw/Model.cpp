@@ -3,17 +3,21 @@
 #include "VMDmotion.h"
 #include "Model.h"
 
+
 Model::Model(Render& dx12) : m_dx12(dx12)
 {
 	m_whiteTex = CreateWhiteTexture();
 	m_blackTex = CreateBlackTexture();
 	m_gradTex = CreateGrayGradationTexture();
+	m_MatAndQuatsIdentity.boneMatrieces = XMMatrixIdentity();
+	XMStoreFloat4(&m_MatAndQuatsIdentity.boneQuatanions, XMQuaternionIdentity());
 }
 
 Model::~Model()
 {
+	if (m_motion)
+		delete m_motion;
 }
-
 void Model::SetMotion(VMDmotion* motion)
 {
 	if (!m_motion)

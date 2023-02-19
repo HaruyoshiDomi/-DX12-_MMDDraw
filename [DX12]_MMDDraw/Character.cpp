@@ -6,6 +6,7 @@
 #include "input.h"
 #include "Character.h"
 
+int Character::m_modelNumber = 0;
 Character::Character()
 {
 	//m_motion = new VMDmotion("asset/motion/JUMP UP.vmd");
@@ -50,11 +51,11 @@ void Character::Draw()
 
 void Character::ActorUpdate()
 {
-	static int num = 0;
 	static int mxnum = Render::Instance()->GetCharacterNum() - 1;
 	if (!m_motion)
 	{
-		m_rotation.y += 0.01;
+		if(m_autoRotateFlag)
+			m_rotation.y += 0.01;
 		if (Input::GetKeyTrigger('M'))
 		{
 			m_motion = new VMDmotion("asset/motion/JUMP UP.vmd");
@@ -78,12 +79,12 @@ void Character::ActorUpdate()
 
 	if (Input::GetKeyTrigger('C'))
 	{
-		++num;
-		if (num > mxnum)
-			num = 0;
+		++m_modelNumber;
+		if (m_modelNumber > mxnum)
+			m_modelNumber = 0;
 
-		m_model = Render::Instance()->GetLodedModel(num);
-		if(m_motion && num <= mxnum  )
+		m_model = Render::Instance()->GetLodedModel(m_modelNumber);
+		if(m_motion && m_modelNumber <= mxnum  )
 			m_model->SetMotion(m_motion);
 
 	}
@@ -95,6 +96,52 @@ void Character::ActorUpdate()
 	m_model->Update(m_martrix);
 }
 
-void Character::SetMotion(VMDmotion* motion)
+
+void Character::AutoRotation()
 {
+	if (!m_autoRotateFlag)
+		m_autoRotateFlag = true;
+	else
+		m_autoRotateFlag = false;
+}
+
+void Character::SetMotion()
+{
+	m_motion = new VMDmotion("asset/motion/JUMP UP.vmd");
+	for (int i = 0; i < Render::Instance()->GetCharacterNum(); i++)
+	{
+		Render::Instance()->GetLodedModel(i)->SetMotion(m_motion);
+	}
+	m_model->SetMotion(m_motion);
+	m_rotation.y = 0;
+}
+
+bool Character::GetMotionFlag()
+{
+	if (m_motion)
+		return true;
+	else
+		return false;
+}
+
+void Character::MotionPlayAndStop()
+{
+	if (m_motion->GetMotionFlag())
+		m_motion->SetMotionFlag(false);
+	else
+		m_motion->SetMotionFlag(true);
+}
+
+void Character::SetModel(int num)
+{
+	m_modelNumber = num;
+	m_model = Render::Instance()->GetLodedModel(m_modelNumber);
+	if (m_motion && m_modelNumber <= (Render::Instance()->GetCharacterNum() - 1))
+		m_model->SetMotion(m_motion);
+}
+
+void Character::ResetMotion()
+{
+	if (m_motion)
+		m_motion->ResetMotion();
 }

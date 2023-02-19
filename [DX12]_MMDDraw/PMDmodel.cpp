@@ -511,6 +511,7 @@ HRESULT PMDmodel::LoadPMDFile(const char* path)
 	fread(signature, sizeof(signature), 1, fp);
 	fread(&pmdheader, sizeof(pmdheader), 1, fp);
 	std::cout << pmdheader.modelname;
+	m_name = (pmdheader.modelname);
 	std::cout << pmdheader.comment << std::endl;
 	unsigned int vertNum;//’¸“_”
 	fread(&vertNum, sizeof(vertNum), 1, fp);
@@ -761,12 +762,11 @@ HRESULT PMDmodel::LoadPMDFile(const char* path)
 	m_boneMatAndQuat.resize(pmdbones.size());
 
 	//ƒ{[ƒ“‚ð‰Šú‰»
-	MatAndQuat Identity;
-	Identity.boneMatrieces = XMMatrixIdentity();
-	Identity.boneQuatanions = {};
 
-	std::fill(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), Identity);
-	
+	std::fill(m_boneMatAndQuat.begin(), m_boneMatAndQuat.end(), m_MatAndQuatsIdentity);
+	XMFLOAT4 f4(3, 2, 1, 1);
+	XMVECTOR a(XMLoadFloat4(&f4));
+	auto mqt = XMMatrixRotationQuaternion(a);
 	uint16_t iknum = 0;
 	fread(&iknum, sizeof(iknum), 1, fp);
 
