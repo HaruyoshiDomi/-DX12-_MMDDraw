@@ -6,6 +6,7 @@
 #include "PMDmodel.h"
 #include "PMXmodel.h"
 #include "Character.h"
+#include "VMDmotion.h"
 #include "XMFLOAT_Helper.h"
 #include"imgui\imgui.h"
 #include"imgui\imgui_impl_win32.h"
@@ -78,9 +79,6 @@ void Render::Update()
 	CameraUpdate();
 	Manager::GetInstance()->Update();
 }
-	bool cb = false;
-	int nsl = 0;
-	float fsl = 0.0f;
 void Render::Draw()
 {
 	BeginDraw();
@@ -564,8 +562,7 @@ void Render::ImguiDrawing()
 	ImGui::NewFrame();
 
 	ImGui::Begin("Setting");
-	ImGui::SetWindowSize(ImVec2(400, 500), ImGuiCond_::ImGuiCond_FirstUseEver);
-	ImGui::Checkbox("CheckBOX Test", &cb);
+	ImGui::SetWindowSize(ImVec2(400, 200), ImGuiCond_::ImGuiCond_FirstUseEver);
 	ImGui::SliderFloat("Lighting_X", &m_parallelLightVec.x, -30.0f, 30.0f);
 	ImGui::SliderFloat("Lighting_Z", &m_parallelLightVec.z, -30.0f, 30.0f);
 	ImGui::SliderInt("ChangeModel", &modelnum, 0, m_modelTabel.size() - 1);
@@ -583,6 +580,9 @@ void Render::ImguiDrawing()
 		}
 		else
 		{
+			int f = c->GetMotion()->GetNowFrame();
+			ImGui::SliderInt("NowMotionFrame", &f, 0, c->GetMotion()->GetFinalFrame());
+
 			if (ImGui::Button("PLAY MOTION"))
 				c->MotionPlayAndStop();
 			if (ImGui::Button("RESET MOTION"))

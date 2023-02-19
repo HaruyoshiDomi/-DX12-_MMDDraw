@@ -18,6 +18,7 @@ public:
 	void MotionPlayAndStop();
 	void SetModel(int num);
 	void ResetMotion();
+	class VMDmotion* GetMotion() { return m_motion; };
 
 protected:
 	void ActorUpdate()override;

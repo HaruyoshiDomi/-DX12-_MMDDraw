@@ -9,9 +9,11 @@ public:
 
 	void SetMotionFlag(bool flag);
 	bool GetMotionFlag() { return m_motionFlag; }
-	uint32_t GetFrameNo() { return m_frameNo; }
 	void SetNowPose();
 	void ResetMotion();
+	int GetNowFrame() { return m_frameNo; }
+	uint32_t GetFinalFrame() { return m_duration; }
+
 	struct VMDIKEnable
 	{
 		uint32_t frameNo = 0;

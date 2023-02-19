@@ -137,6 +137,7 @@ void VMDmotion::SetNowPose()
 
 void VMDmotion::ResetMotion()
 {
+	m_starTime = timeGetTime();
 	m_frameNo = m_oldframeNo = 0;
 	SetNowPose();
 }
