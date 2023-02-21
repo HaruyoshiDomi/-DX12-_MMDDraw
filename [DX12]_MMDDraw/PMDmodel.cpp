@@ -511,7 +511,8 @@ HRESULT PMDmodel::LoadPMDFile(const char* path)
 	fread(signature, sizeof(signature), 1, fp);
 	fread(&pmdheader, sizeof(pmdheader), 1, fp);
 	std::cout << pmdheader.modelname;
-	m_name = (pmdheader.modelname);
+	auto wname = helper::GetWideStringFromString(pmdheader.modelname);
+	m_name = helper::GetUTF8FromWideString(wname);
 	std::cout << pmdheader.comment << std::endl;
 	unsigned int vertNum;//’¸“_”
 	fread(&vertNum, sizeof(vertNum), 1, fp);
