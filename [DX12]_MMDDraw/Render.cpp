@@ -552,35 +552,28 @@ void Render::EndDraw()
 	m_cmdAllocator->Reset();//キューをクリア
 	m_cmdList->Reset(m_cmdAllocator.Get(), nullptr);//再びコマンドリストをためる準備
 }
-std::vector<bool> modelflag;
-bool kkk = true;
-int aaa = -1;
-int aab = -1;
-int num = 1;
-float fff = 0.0f;
-const char* texts = u8"あああ";
 void Render::ImguiDrawing()
 {
 	
 	auto crt = Manager::GetInstance()->GetObjects<Character>();
 	static int modelnum = 0;
-	modelflag.resize(m_modelTabel.size());
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
 	ImGui::Begin("Setting");
 	ImGui::SetWindowSize(ImVec2(400, 200), ImGuiCond_::ImGuiCond_FirstUseEver);
-	ImGui::BeginListBox("test");
-	ImGui::RadioButton("model", &aaa, num);
-	ImGui::SameLine();
-	ImGui::RadioButton(m_modelNameTabel[2].c_str(), &aaa, num + 1);
-	ImGui::SliderAngle("test", &fff);
-	ImGui::RadioButton("model", &aaa, 2);
-	ImGui::EndListBox();
+	{
+		for (int i = 0; i < m_modelNameTabel.size(); i++)
+		{
+			ImGui::RadioButton(m_modelNameTabel[i].c_str(), &modelnum, i);
+		}
+	}
+
 	ImGui::SliderFloat("Lighting_X", &m_parallelLightVec.x, -30.0f, 30.0f);
 	ImGui::SliderFloat("Lighting_Z", &m_parallelLightVec.z, -30.0f, 30.0f);
 	ImGui::SliderInt("ChangeModel", &modelnum, 0, m_modelTabel.size() - 1);
+	ImGui::BeginMainMenuBar();
 	for (auto c : crt)
 	{
 		if (!c->GetMotionFlag())
@@ -597,7 +590,8 @@ void Render::ImguiDrawing()
 		{
 			int f = c->GetMotion()->GetNowFrame();
 			ImGui::SliderInt("NowMotionFrame", &f, 0, c->GetMotion()->GetFinalFrame());
-
+			if(f != c->GetMotion()->GetNowFrame())
+				c->GetMotion()->SetNewMotionFrame(f);
 			if (ImGui::Button("PLAY MOTION"))
 				c->MotionPlayAndStop();
 			if (ImGui::Button("RESET MOTION"))
@@ -605,6 +599,7 @@ void Render::ImguiDrawing()
 		}
 		c->SetModel(modelnum);
 	}
+	ImGui::EndMainMenuBar();
 
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	ImGui::End();

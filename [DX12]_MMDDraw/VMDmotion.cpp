@@ -19,7 +19,7 @@ void VMDmotion::UpdateMotion()
 		if (m_frameNo > m_duration)
 		{
 			m_starTime = timeGetTime();
-			m_frameNo = 0;
+			m_frameNo = m_oldframeNo = 0;
 		}
 		std::cout << m_frameNo << "：" << m_duration << std::endl;
 		auto bonemat = m_model->GetBoneMatrixAndQuatanion();
@@ -86,10 +86,9 @@ void VMDmotion::SetMotionFlag(bool flag)
 
 void VMDmotion::SetNowPose()
 {
-	std::cout << m_frameNo << "：" << m_duration << std::endl;
 	auto bonemat = m_model->GetBoneMatrixAndQuatanion();
 	//行列情報クリア
-
+	auto f = m_frameNo + m_oldframeNo;
 	std::fill(bonemat->begin(), bonemat->end(), m_model->MatAndQuatIdentity());
 
 	for (auto& bonemotion : m_motionData)
@@ -101,7 +100,6 @@ void VMDmotion::SetNowPose()
 			continue;
 		auto node = itBoneNode->second;
 		auto motions = bonemotion.second;
-		auto f = m_frameNo;
 		auto rit = std::find_if(motions.rbegin(), motions.rend(), [f](const Motion& motion)
 			{
 				return motion.frameNo <= f;
@@ -114,7 +112,7 @@ void VMDmotion::SetNowPose()
 		auto it = rit.base();
 		if (it != motions.end())
 		{
-			auto t = (float)(m_frameNo - rit->frameNo) / (float)(it->frameNo - rit->frameNo);
+			auto t = (float)(f - rit->frameNo) / (float)(it->frameNo - rit->frameNo);
 			t = GetYFromXOnBezier(t, it->p1, it->p2, 12);
 			auto quatvec = XMQuaternionSlerp(rit->quaternion, it->quaternion, t);
 			rotation = XMMatrixRotationQuaternion(quatvec);
@@ -132,6 +130,20 @@ void VMDmotion::SetNowPose()
 			* rotation
 			* XMMatrixTranslation(pos.x, pos.y, pos.z);
 		(*bonemat)[node.boneidx].boneMatrieces = mat * XMMatrixTranslationFromVector(offset);
+	}
+}
+
+void VMDmotion::SetNewMotionFrame(const int f)
+{
+	if (f <= m_duration)
+	{
+		m_starTime = timeGetTime();
+		m_oldframeNo = f;
+		m_frameNo = 0;
+	}
+	else
+	{
+		ResetMotion();
 	}
 }
 

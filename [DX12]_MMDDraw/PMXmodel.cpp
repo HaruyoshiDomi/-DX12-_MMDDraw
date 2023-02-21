@@ -468,7 +468,6 @@ HRESULT PMXmodel::LoadPMXFile(const char* filepath)
 
 	auto testnameutf8 = helper::GetUTF8FromWideString(name[0]);
 	m_name = testnameutf8;
-	std::cout << testnameutf8.c_str() << std::endl;
 	uint32_t numVer = 0;
 
 	fread(&numVer, sizeof(numVer), 1, fp);
