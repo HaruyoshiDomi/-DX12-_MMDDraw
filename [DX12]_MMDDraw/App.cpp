@@ -86,6 +86,8 @@ HRESULT App::Init()
 		m_DXrender->GetHeapForImgui()->GetCPUDescriptorHandleForHeapStart(),
 		m_DXrender->GetHeapForImgui()->GetGPUDescriptorHandleForHeapStart()
 	);
+	auto& io = ImGui::GetIO();
+	io.Fonts->AddFontFromFileTTF("imgui/fonts/Migu 1M Regular.ttf", 15.0f, nullptr, glyphRangesJapanese);
 	Mouse::Mouse_Initialize(m_hwnd);
 
 	return S_OK;

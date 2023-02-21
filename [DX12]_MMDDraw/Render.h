@@ -33,6 +33,9 @@ namespace helper
 	std::string GetStringFromWideString(const std::wstring& wstr);
 
 
+	std::string GetUTF8FromWideString(const std::wstring& wstr);
+
+
 	extern bool CheckResult(HRESULT& result, ID3DBlob* errBlob = nullptr);
 
 }

@@ -552,17 +552,32 @@ void Render::EndDraw()
 	m_cmdAllocator->Reset();//キューをクリア
 	m_cmdList->Reset(m_cmdAllocator.Get(), nullptr);//再びコマンドリストをためる準備
 }
-
+std::vector<bool> modelflag;
+bool kkk = true;
+int aaa = -1;
+int aab = -1;
+int num = 1;
+float fff = 0.0f;
+const char* texts = u8"あああ";
 void Render::ImguiDrawing()
 {
+	
 	auto crt = Manager::GetInstance()->GetObjects<Character>();
 	static int modelnum = 0;
+	modelflag.resize(m_modelTabel.size());
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
 	ImGui::Begin("Setting");
 	ImGui::SetWindowSize(ImVec2(400, 200), ImGuiCond_::ImGuiCond_FirstUseEver);
+	ImGui::BeginListBox("test");
+	ImGui::RadioButton("model", &aaa, num);
+	ImGui::SameLine();
+	ImGui::RadioButton(m_modelNameTabel[2].c_str(), &aaa, num + 1);
+	ImGui::SliderAngle("test", &fff);
+	ImGui::RadioButton("model", &aaa, 2);
+	ImGui::EndListBox();
 	ImGui::SliderFloat("Lighting_X", &m_parallelLightVec.x, -30.0f, 30.0f);
 	ImGui::SliderFloat("Lighting_Z", &m_parallelLightVec.z, -30.0f, 30.0f);
 	ImGui::SliderInt("ChangeModel", &modelnum, 0, m_modelTabel.size() - 1);
@@ -805,6 +820,22 @@ std::string helper::GetStringFromWideString(const std::wstring& wstr)
 	assert(num1 == num2);
 
 	std::string str(cpmutibyte, cpmutibyte + num1 - 1);
+	delete[] cpmutibyte;
+	return (str);
+}
+
+std::string helper::GetUTF8FromWideString(const std::wstring& wstr)
+{
+	auto num1 = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, (char*)NULL, 0, NULL, NULL);
+
+	CHAR* cputf8 = new CHAR[num1];
+
+	auto num2 = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, cputf8, num1, NULL, NULL);
+
+	assert(num1 == num2);
+
+	std::string str(cputf8, cputf8 + num1 - 1);
+	delete[] cputf8;
 
 	return (str);
 }
