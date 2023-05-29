@@ -117,14 +117,14 @@ void App::Update()
 
 			m_dwCurrentTime = timeGetTime();
 
-			if ((m_dwCurrentTime - m_dwExecLastTime) >= (1000 / FPS))
+			if ((float)(m_dwCurrentTime - m_dwExecLastTime) >= (1000.0f / FPS))
 			{
 				m_dwExecLastTime = m_dwCurrentTime;
 
-			}
-			m_DXrender->Update();
+				m_DXrender->Update();
 
-			m_DXrender->Draw();
+				m_DXrender->Draw();
+			}
 
 		}
 	}

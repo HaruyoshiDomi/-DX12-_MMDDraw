@@ -88,7 +88,7 @@ void VMDmotion::SetNowPose()
 {
 	auto bonemat = m_model->GetBoneMatrixAndQuatanion();
 	//s—ñî•ñƒNƒŠƒA
-	auto f = m_frameNo + m_oldframeNo;
+	auto f = m_oldframeNo;
 	std::fill(bonemat->begin(), bonemat->end(), m_model->MatAndQuatIdentity());
 
 	for (auto& bonemotion : m_motionData)
@@ -140,6 +140,7 @@ void VMDmotion::SetNewMotionFrame(const int f)
 		m_starTime = timeGetTime();
 		m_oldframeNo = f;
 		m_frameNo = 0;
+		SetNowPose();
 	}
 	else
 	{
@@ -152,6 +153,15 @@ void VMDmotion::ResetMotion()
 	m_starTime = timeGetTime();
 	m_frameNo = m_oldframeNo = 0;
 	SetNowPose();
+}
+
+int VMDmotion::GetNowFrame()
+{
+	if(!m_motionFlag)
+		return int(m_oldframeNo); 
+	else
+		return int(m_frameNo);
+
 }
 
 

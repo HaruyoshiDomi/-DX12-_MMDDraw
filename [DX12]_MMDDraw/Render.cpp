@@ -589,8 +589,8 @@ void Render::ImguiDrawing()
 		else
 		{
 			int f = c->GetMotion()->GetNowFrame();
-			ImGui::SliderInt("NowMotionFrame", &f, 0, c->GetMotion()->GetFinalFrame());
-			if(f != c->GetMotion()->GetNowFrame())
+			auto motion = c->GetMotion();
+			if (ImGui::SliderInt("NowMotionFrame", &f, 0, c->GetMotion()->GetFinalFrame()))
 				c->GetMotion()->SetNewMotionFrame(f);
 			if (ImGui::Button("PLAY MOTION"))
 				c->MotionPlayAndStop();

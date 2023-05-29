@@ -12,7 +12,7 @@ public:
 	void SetNowPose();
 	void SetNewMotionFrame(const int f);
 	void ResetMotion();
-	int GetNowFrame() { return int(m_frameNo); }
+	int GetNowFrame();
 	uint32_t GetFinalFrame() { return m_duration; }
 
 	struct VMDIKEnable

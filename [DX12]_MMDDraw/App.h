@@ -8,7 +8,7 @@ public:
 	HRESULT Init();
 	void Update();
 	void Uninit();
-
+	//float GetAPP ()FPSm_dwCurrentTime - m_dwExecLastTime
 	~App();
 private:
 
